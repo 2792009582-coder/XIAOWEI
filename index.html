@@ -1,0 +1,2507 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小唯阅读器 · Xiaowei Reader</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js" defer></script>
+<style>
+:root{
+  --paper:#f7f6f2; --ink:#2b2f36; --muted:#8a8f98; --line:#e6e3dc;
+  --accent:#4338ca; --accent-soft:#eef0fb; --zh:#5f6672; --read:#16a34a;
+}
+/* ---- 主题：清爽白（默认·ScholRead 风） / 护眼纸 / 夜间 ---- */
+body[data-theme=clean]{
+  --paper:#eef1f7; --ink:#1d2230; --muted:#7d8494; --line:#e0e5ef;
+  --accent:#3b62f6; --accent-soft:#e8edfd; --zh:#566070; --read:#0e9f5d;
+}
+body[data-theme=dark]{
+  --paper:#15171d; --ink:#d7dae2; --muted:#8b90a0; --line:#2a2e3a;
+  --accent:#7c9aff; --accent-soft:#242a3d; --zh:#a6adb9; --read:#34d399;
+}
+body[data-theme=dark] #topbar,body[data-theme=dark] #side,body[data-theme=dark] .modal,
+body[data-theme=dark] #chatPanel,body[data-theme=dark] #resume,body[data-theme=dark] #hlPalette,
+body[data-theme=dark] #markMenu,body[data-theme=dark] #progressWrap,body[data-theme=dark] .figwrap,
+body[data-theme=dark] #lightbox,body[data-theme=dark] #folderBar{background:#1d2028;border-color:var(--line)}
+body[data-theme=dark] .msg.ai{background:#262a34}
+body[data-theme=dark] .msg .quote{background:#232837;border-left-color:#3b4a7a;color:#b6bccb}
+body[data-theme=dark] #report .sec{background:#1a1d24}
+body[data-theme=dark] .pact button{background:#262a34;color:var(--muted)}
+body[data-theme=dark] .pzh{background:transparent}
+body[data-theme=dark] .pdata{background:#20242e;border-color:#323848;color:#a8afbd}
+body[data-theme=dark] .lib-item .lfd,body[data-theme=dark] .lib-item .ldel{background:#1d2028;box-shadow:0 0 0 3px #15171d}
+body[data-theme=dark] #gear:hover,body[data-theme=dark] #themeBtn:hover{background:#262a34;color:var(--ink)}
+body[data-theme=dark] #gear,body[data-theme=dark] #themeBtn{color:var(--muted)}
+body[data-theme=clean] #gear:hover,body[data-theme=clean] #themeBtn:hover{background:#e4e8f3;color:var(--ink)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:14.5px}
+button{font-family:inherit;cursor:pointer;border:none;background:none;font-size:inherit;color:inherit}
+input,textarea{font-family:inherit;font-size:inherit}
+
+/* ---------- 顶栏 ---------- */
+#topbar{position:fixed;top:0;left:0;right:0;height:52px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 16px;z-index:50}
+#topbar .logo{font-weight:700;font-size:15px;color:var(--accent);margin-right:8px;white-space:nowrap}
+#topbar .logo span{color:var(--ink)}
+.tbtn{padding:7px 13px;border-radius:8px;background:var(--accent-soft);color:var(--accent);font-weight:600;white-space:nowrap;transition:.15s;font-size:13.5px}
+.tbtn:hover{background:#dfe3f8}
+.tbtn.primary{background:var(--accent);color:#fff}
+.tbtn.primary:hover{background:#3730a3}
+.tbtn:disabled{opacity:.4;cursor:not-allowed}
+#docTitle{color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:230px;margin-left:auto}
+#gear{padding:7px 10px;border-radius:8px;color:var(--muted)}
+#gear:hover{background:#f0efec;color:var(--ink)}
+#readBar{position:fixed;top:52px;left:270px;right:0;height:3px;background:transparent;z-index:49;display:none}
+#readBar.show{display:block}
+#readFill{height:100%;width:0;background:var(--accent);transition:width .2s}
+
+/* ---------- 布局 ---------- */
+#layout{display:flex;height:calc(100% - 52px);margin-top:52px}
+#side{width:270px;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;flex-shrink:0}
+#side .tabs{display:flex;border-bottom:1px solid var(--line)}
+#side .tabs button{flex:1;padding:11px 0;color:var(--muted);font-weight:600;font-size:13px;border-bottom:2px solid transparent}
+#side .tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
+#sideBody{flex:1;overflow-y:auto;padding:10px}
+.side-tip{color:var(--muted);font-size:12.5px;line-height:1.8;padding:8px 5px}
+.outline-item{padding:7px 10px;border-radius:7px;cursor:pointer;font-size:13px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:flex;align-items:center;gap:7px}
+.outline-item:hover{background:var(--accent-soft);color:var(--accent)}
+.outline-item .dot{width:6px;height:6px;border-radius:50%;background:var(--line);flex-shrink:0}
+.outline-item.read .dot{background:var(--read)}
+.anno-item{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;cursor:pointer;position:relative}
+.anno-item:hover{border-color:var(--accent)}
+.anno-item .aq{font-size:12.5px;line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.anno-item .an{margin-top:5px;font-size:12px;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:3px 7px;line-height:1.5}
+.anno-item .adel{position:absolute;top:5px;right:7px;color:#9ca3af;font-size:12px}
+.anno-item .adel:hover{color:#ef4444}
+/* 文献库 */
+.lib-item{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:9px;cursor:pointer;position:relative}
+.lib-item:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(67,56,202,.07)}
+.lib-item.cur{border-color:var(--accent);background:var(--accent-soft)}
+.lib-item .lt{font-weight:700;font-size:13px;line-height:1.45;margin-bottom:3px;padding-right:58px}
+.lib-item .lm{font-size:11.5px;color:var(--muted);margin-bottom:6px}
+.lib-item .lbar{height:4px;background:var(--line);border-radius:4px;overflow:hidden}
+.lib-item .lfill{height:100%;background:var(--accent);border-radius:4px}
+.lib-item .lfd{position:absolute;top:6px;right:28px;color:#b6b9c0;font-size:12px;background:#fff;border-radius:50%;width:21px;height:21px;display:flex;align-items:center;justify-content:center;z-index:2;box-shadow:0 0 0 3px #fff}
+.lib-item .lfd:hover{color:var(--accent)}
+.lib-item .ldel{position:absolute;top:6px;right:6px;color:#b6b9c0;font-size:12px;background:#fff;border-radius:50%;width:21px;height:21px;display:flex;align-items:center;justify-content:center;z-index:2;box-shadow:0 0 0 3px #fff}
+.lib-item .ldel:hover{color:#ef4444}
+.lib-actions{display:flex;gap:8px;margin-top:12px}
+.lib-actions .btn{flex:1;padding:7px 0;font-size:12px}
+
+#reader{flex:1;overflow-y:auto;padding:34px 120px 120px 40px;position:relative;transition:padding-right .28s}
+#layout.chatpad #reader{padding-right:486px}
+#article{max-width:720px;margin:0 auto}
+#dropzone{margin-top:16vh;text-align:center;color:var(--muted)}
+#dropzone .big{font-size:64px;color:#d3d0c8}
+#dropzone h2{font-size:19px;margin:14px 0 10px;color:var(--ink);font-family:Georgia,"Songti SC",serif}
+#dropzone p{font-size:13px;line-height:2}
+#dropzone.drag{outline:3px dashed var(--accent);outline-offset:-14px;border-radius:18px}
+
+/* ---------- 小说式段落 ---------- */
+.pblock{position:relative;margin:0 0 30px;font-family:Georgia,"Times New Roman","Songti SC","STSong","SimSun",serif}
+.pblock.head{margin-top:38px;margin-bottom:18px}
+.pblock.head .pen{font-weight:700;font-size:19px;line-height:1.5;letter-spacing:.2px}
+.pen{font-size:16px;line-height:1.92;color:var(--ink);white-space:pre-wrap;word-break:break-word;cursor:text;text-align:justify}
+.pzh{margin-top:10px;padding-left:14px;border-left:2px solid var(--line);color:var(--zh);font-size:14.5px;line-height:1.9;display:none;text-align:justify}
+.pzh.show{display:block}
+.pzh .empty{color:var(--muted);font-size:12.5px;font-family:"Segoe UI","PingFang SC",sans-serif;display:flex;align-items:center;gap:8px}
+.pzh .empty button{color:var(--accent);font-weight:600;text-decoration:underline}
+.freenote{font-size:11px;color:#92600a;background:#fef3c7;border-radius:6px;padding:2px 9px;margin-bottom:6px;display:inline-block;font-family:"Segoe UI","PingFang SC",sans-serif}
+.pzh.err{color:#dc2626;font-size:13px;font-family:"Segoe UI","PingFang SC",sans-serif}
+.pmeta{position:absolute;left:-96px;top:1px;font-size:11px;color:var(--muted);opacity:0;transition:.15s;white-space:nowrap;font-family:"Segoe UI",sans-serif}
+.pblock:hover .pmeta{opacity:.55}
+.pact{position:absolute;right:-84px;top:0;opacity:0;transition:.15s;display:flex;gap:4px}
+.pblock:hover .pact{opacity:.85}
+.pact button{font-size:11.5px;padding:2px 8px;border-radius:6px;background:#eeece7;color:var(--muted);font-family:"Segoe UI",sans-serif}
+.pact button:hover{background:var(--accent-soft);color:var(--accent)}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid #c7d2fe;border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.kaTeX-error{color:#dc2626;font-size:12px}
+
+/* 续读提示 */
+#resume{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(80px);background:#fff;border:1px solid var(--line);border-radius:30px;box-shadow:0 8px 28px rgba(0,0,0,.14);padding:9px 20px;font-size:13px;display:flex;align-items:center;gap:10px;z-index:60;transition:.3s;cursor:pointer}
+#resume.show{transform:translateX(-50%) translateY(0)}
+#resume b{color:var(--accent)}
+#resume .x{color:var(--muted);font-size:15px;padding:0 3px}
+
+/* ---------- 高亮 ---------- */
+mark.hl{border-radius:3px;padding:0 1px;cursor:pointer;color:inherit}
+mark.hl-y{background:#fef08a}mark.hl-g{background:#bbf7d0}mark.hl-p{background:#fbcfe8}mark.hl-b{background:#bfdbfe}
+/* 有笔记的高亮：尾部小笔尖（伪元素不进 DOM，不影响标注文本匹配/删除） */
+mark.hl.has-note::after{content:'✎';font-size:.72em;color:#b45309;vertical-align:.5em;margin-left:2px;opacity:.92;user-select:none}
+#hlPalette{position:fixed;z-index:99;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:7px 9px;display:none;gap:7px;align-items:center}
+#hlPalette.show{display:flex}
+#hlPalette .c{width:19px;height:19px;border-radius:50%;cursor:pointer;border:1px solid rgba(0,0,0,.12)}
+#hlPalette .ask{padding:3px 10px;border-radius:7px;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:12.5px;margin-left:3px}
+#hlPalette .ask:hover{background:var(--accent);color:#fff}
+#hlPalette .x{color:var(--muted);font-size:12px}
+#markMenu{position:fixed;z-index:99;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:5px;display:none;flex-direction:column}
+#markMenu.show{display:flex}
+#markMenu button{padding:5px 12px;border-radius:6px;font-size:12.5px;text-align:left}
+#markMenu button:hover{background:var(--accent-soft);color:var(--accent)}
+
+/* ---------- 进度条（批处理） ---------- */
+#progressWrap{position:fixed;top:52px;left:270px;right:0;z-index:40;background:#fff;border-bottom:1px solid var(--line);padding:8px 20px;display:none;align-items:center;gap:12px;font-size:12.5px;color:var(--muted)}
+#progressWrap.show{display:flex}
+#progressBar{flex:1;height:5px;background:var(--line);border-radius:5px;overflow:hidden}
+#progressFill{height:100%;width:0;background:var(--accent);transition:.3s}
+
+/* ---------- 问答面板 ---------- */
+#chatPanel{position:fixed;top:52px;right:0;bottom:0;width:400px;max-width:92vw;background:#fff;border-left:1px solid var(--line);z-index:70;transform:translateX(102%);transition:transform .25s;display:flex;flex-direction:column}
+#chatPanel.open{transform:translateX(0)}
+#chatPanel header{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;font-weight:700;font-size:14.5px}
+#chatPanel header .sp{flex:1}
+#chatPanel header button{font-size:12px;color:var(--muted);padding:3px 9px;border-radius:6px}
+#chatPanel header button:hover{background:#f3f4f6;color:var(--accent)}
+#ctxChip{margin:10px 12px 0;border:1px dashed #c7d2fe;background:var(--accent-soft);border-radius:9px;padding:8px 10px;font-size:12.5px;line-height:1.6;display:none;color:#374151;position:relative;max-height:110px;overflow:hidden}
+#ctxChip.show{display:block}
+#ctxChip .lab{font-weight:700;color:var(--accent);font-size:11px;margin-bottom:3px}
+#ctxChip .x{position:absolute;top:5px;right:7px;color:var(--muted)}
+#chatMsgs{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:12px}
+.msg{max-width:88%;font-size:13.5px;line-height:1.7}
+.msg.user{align-self:flex-end;background:var(--accent);color:#fff;border-radius:13px 13px 3px 13px;padding:9px 13px;white-space:pre-wrap;word-break:break-word}
+.msg.ai{align-self:flex-start;background:#f4f4f2;border-radius:13px 13px 13px 3px;padding:10px 13px;max-width:92%}
+.msg.ai p{margin:5px 0}
+.msg.ai ul{padding-left:18px}
+.msg.ai li{margin:3px 0}
+.msg.ai b{color:var(--ink)}
+.msg.ai code{background:#e9e7e2;padding:1px 5px;border-radius:5px;font-size:12px}
+.msg .quote{border-left:3px solid #c7d2fe;background:#fafafd;border-radius:6px;padding:5px 9px;margin-bottom:7px;font-size:12px;color:#5b6472;white-space:pre-wrap;word-break:break-word;max-height:100px;overflow:hidden;font-family:Georgia,serif}
+.msg .spin{margin:2px 4px}
+#chatForm{border-top:1px solid var(--line);padding:10px 12px;display:flex;gap:8px;align-items:flex-end}
+#chatInput{flex:1;resize:none;border:1px solid var(--line);border-radius:10px;padding:9px 11px;outline:none;max-height:120px;font-size:13.5px;line-height:1.6}
+#chatInput:focus{border-color:var(--accent)}
+#chatSend{padding:9px 15px;border-radius:10px;background:var(--accent);color:#fff;font-weight:600;font-size:13.5px}
+#chatSend:disabled{opacity:.4}
+#chatEmpty{text-align:center;color:var(--muted);font-size:12.5px;line-height:2;margin:auto;padding:0 16px}
+
+/* ---------- 弹窗 ---------- */
+.modal-mask{position:fixed;inset:0;background:rgba(17,24,39,.45);z-index:100;display:none;align-items:center;justify-content:center;padding:24px}
+.modal-mask.show{display:flex}
+.modal{background:#fff;border-radius:14px;max-width:640px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+.modal.wide{max-width:880px}
+.modal header{padding:16px 22px;border-bottom:1px solid var(--line);font-weight:700;font-size:16px;display:flex;align-items:center}
+.modal header .x{margin-left:auto;color:var(--muted);font-size:20px;line-height:1;padding:2px 8px;border-radius:6px}
+.modal header .x:hover{background:#f3f4f6}
+.modal .body{padding:20px 22px;overflow-y:auto;line-height:1.7}
+.modal footer{padding:14px 22px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:right}
+.frow{margin-bottom:15px}
+.frow label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.frow input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;outline:none}
+.frow input:focus{border-color:var(--accent)}
+.frow .hint,.hint{font-size:11.5px;color:#9ca3af;margin-top:5px;line-height:1.6}
+.fgrid{display:flex;gap:12px}
+.fgrid .frow{flex:1}
+.btn{padding:9px 18px;border-radius:8px;font-weight:600;background:var(--accent-soft);color:var(--accent);font-size:13.5px}
+.btn:hover{background:#dfe3f8}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary:hover{background:#3730a3}
+
+/* ---------- 分析报告 ---------- */
+#steps{display:flex;flex-direction:column;gap:9px;margin-bottom:18px}
+.step{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--muted)}
+.step .ico{width:19px;height:19px;border-radius:50%;border:2px solid var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:transparent}
+.step.run{color:var(--ink)}
+.step.run .ico{border-color:var(--accent);border-top-color:transparent;animation:sp .7s linear infinite}
+.step.ok{color:var(--ink)}
+.step.ok .ico{border-color:var(--read);background:var(--read);color:#fff}
+.step.err{color:#dc2626}
+.step.err .ico{border-color:#dc2626;background:#dc2626;color:#fff}
+#report{display:none}
+#report h3{margin:20px 0 8px;padding-left:10px;border-left:4px solid var(--accent);font-size:15px}
+#report .sec{background:#fafaf8;border:1px solid var(--line);border-radius:9px;padding:13px 16px}
+#report .sec ul{padding-left:20px}
+#report .sec li{margin:5px 0}
+#report .sec p{margin:6px 0}
+#report code{background:#eef1f5;padding:1px 5px;border-radius:5px;font-size:12.5px}
+.empty-report{color:var(--muted);text-align:center;padding:30px 0;font-size:13px}
+
+/* ---------- 插图 ---------- */
+.pblock.fig{margin:32px 0 38px;text-align:center}
+.figwrap{display:inline-block;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:0 3px 16px rgba(0,0,0,.08);cursor:zoom-in;max-width:100%;transition:box-shadow .15s}
+.figwrap:hover{box-shadow:0 6px 22px rgba(0,0,0,.14)}
+.figwrap img{display:block;max-width:min(560px,78vw);max-height:66vh;width:auto;height:auto;border-radius:6px}
+#lightbox{position:fixed;inset:0;background:rgba(15,17,22,.85);z-index:300;display:none;align-items:center;justify-content:center;cursor:zoom-out;padding:28px}
+#lightbox.show{display:flex}
+#lightbox img{max-width:94vw;max-height:92vh;border-radius:8px;box-shadow:0 10px 60px rgba(0,0,0,.5)}
+/* ---------- 数据块（表格行/图表刻度，原样保留不翻译） ---------- */
+.pblock.data{margin:12px 0 24px}
+.pblock.data .pdata{font-family:"Consolas","Courier New",monospace;font-size:12px;color:#6f7480;background:#f4f3ee;border:1px dashed #d8d4c8;border-radius:8px;padding:9px 13px;white-space:pre-wrap;line-height:1.65;word-break:break-all}
+.pblock.caption .pen{font-size:13.5px;color:#6f7480;font-style:italic}
+.pblock.caption .pzh{font-size:13px}
+/* ---------- 文件夹弹窗 ---------- */
+.fopt{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:7px;cursor:pointer;font-size:13.5px}
+.fopt:hover{border-color:var(--accent);background:var(--accent-soft)}
+.fopt.cur{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
+.fopt .cnt{margin-left:auto;color:var(--muted);font-size:12px;font-weight:400}
+.folder-head{font-size:11.5px;font-weight:700;color:var(--muted);padding:10px 4px 5px;letter-spacing:.4px}
+.fbar{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:thin}
+.fbar::-webkit-scrollbar{height:4px}
+.fchip{white-space:nowrap;padding:5px 12px;border-radius:20px;background:#efede8;font-size:12px;color:var(--ink);cursor:pointer;flex-shrink:0;border:1px solid transparent}
+.fchip:hover{background:var(--accent-soft)}
+.fchip.on{background:var(--accent);color:#fff}
+.fchip .n{opacity:.6;margin-left:4px;font-size:11px}
+/* ---------- 句级联动 ---------- */
+.pen .sen:hover{background:#efede6;border-radius:3px}
+.zsen{border-radius:3px;transition:background .12s}
+.zsen.lit{background:#e6e2d4}
+/* ---------- 公式 ---------- */
+.mth .katex-display{margin:10px 0;overflow-x:auto}
+#toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:200;display:none;max-width:80vw}
+#toast.show{display:block}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo">📖 小唯<span>阅读器</span></div>
+  <button class="tbtn" id="btnOpen">打开 PDF</button>
+  <button class="tbtn" id="btnTransAll" disabled>翻译全文</button>
+  <button class="tbtn primary" id="btnAgent" disabled>⚡ Agent 分析</button>
+  <button class="tbtn" id="btnChat" disabled>💬 问 AI</button>
+  <button class="tbtn" id="btnExport" disabled>导出对照</button>
+  <button class="tbtn" id="btnAIRelayout" title="把本地解析结果交给 Agent 审校：删噪声/合并误拆段/纠正标题——失败自动保留本地排版">🤖 AI 排版</button>
+  <span id="docTitle"></span>
+  <button id="themeBtn" title="切换主题（清爽白 / 护眼纸 / 夜间）" style="background:none;border:none;font-size:17px;cursor:pointer;padding:4px 6px;border-radius:8px;color:var(--muted)">☀</button>
+  <button id="gear" title="设置">⚙</button>
+</div>
+<div id="readBar"><div id="readFill"></div></div>
+<input type="file" id="fileInput" accept="application/pdf" style="display:none">
+<input type="file" id="bkInput" accept=".json,application/json" style="display:none">
+
+<div id="progressWrap">
+  <span class="spin"></span><span id="progressText">处理中…</span>
+  <div id="progressBar"><div id="progressFill"></div></div>
+</div>
+
+<div id="layout">
+  <aside id="side">
+    <div class="tabs">
+      <button class="on" data-tab="lib">📚 文献库</button>
+      <button data-tab="outline">目录</button>
+      <button data-tab="anno">标注</button>
+    </div>
+    <div id="sideBody">
+      <div id="tab-lib"></div>
+      <div id="tab-outline" style="display:none"><div class="side-tip">打开 PDF 后，此处显示章节结构（绿点=已读到）。点击可跳转。</div></div>
+      <div id="tab-anno" style="display:none">
+        <div class="side-tip" id="annoTip">暂无标注。选中文本后用调色盘高亮，点击高亮处可写笔记。</div>
+        <div id="annoList"></div>
+        <button class="btn" id="btnExportAnno" style="display:none;width:100%;margin-top:8px">导出笔记 (.md)</button>
+      </div>
+    </div>
+  </aside>
+  <main id="reader">
+    <div id="dropzone">
+      <div class="big">📄</div>
+      <h2>拖入一篇 PDF 论文，开始精读</h2>
+      <p>小说式连续排版 · 逐段中文对照 · 阅读进度自动记忆<br>
+      划词高亮 · 划词问 AI · Agent 总结 / 创新点 / 方法 / 公式解析<br>
+      <span style="color:#9ca3af">需要文字版 PDF（扫描件无法提取文本）· 全部数据仅存本机</span></p>
+      <p style="margin-top:14px"><button class="tbtn" id="dzSetup">① 先绑定 Agent（推荐免费：智谱 GLM-4-Flash）</button><br>
+      <span style="font-size:12px;color:#9ca3af">不绑也能用：排版/阅读/高亮全本地；翻译有免费公共引擎兜底，AI 分析与「AI 排版」需绑定</span></p>
+    </div>
+  </main>
+</div>
+
+<!-- 选区调色盘 -->
+<div id="hlPalette">
+  <div class="c" data-c="y" style="background:#fef08a" title="黄"></div>
+  <div class="c" data-c="g" style="background:#bbf7d0" title="绿"></div>
+  <div class="c" data-c="p" style="background:#fbcfe8" title="粉"></div>
+  <div class="c" data-c="b" style="background:#bfdbfe" title="蓝"></div>
+  <button class="ask" id="btnAsk">💬 问 AI</button>
+  <button class="x" id="hlCancel">✕</button>
+</div>
+<div id="markMenu">
+  <button id="mNote">📝 添加/修改笔记</button>
+  <button id="mDel">🗑 删除此标注</button>
+</div>
+
+<!-- 续读提示 -->
+<div id="resume">↩ 上次读到第 <b id="resumePid"></b> 段，<span style="color:var(--muted)">点击继续阅读</span><button class="x" id="resumeX">✕</button></div>
+
+<!-- 问答面板 -->
+<div id="chatPanel">
+  <header>💬 划词问答 <span class="sp"></span>
+    <button id="chatNew">新对话</button><button id="chatExport">导出</button><button id="chatClose">收起</button>
+  </header>
+  <div id="ctxChip"><div class="lab">📌 当前划选原文（将随提问发送）</div><div id="ctxText"></div><button class="x" id="ctxX">✕</button></div>
+  <div id="chatMsgs"><div id="chatEmpty">选中句子点「问 AI」可精准提问；<br>不划词直接输入也可以——会自动附上当前论文背景<br><br>例如：这篇论文最大的创新点是什么？<br>这个公式的第二项物理含义是什么？</div></div>
+  <form id="chatForm">
+    <textarea id="chatInput" rows="1" placeholder="输入问题，Enter 发送（Shift+Enter 换行）"></textarea>
+    <button id="chatSend" type="submit">发送</button>
+  </form>
+</div>
+
+<!-- 整理文件夹 -->
+<div class="modal-mask" id="folderMask">
+  <div class="modal" style="max-width:430px">
+    <header>📁 移动到文件夹<button class="x" data-close="folderMask">×</button></header>
+    <div class="body">
+      <div id="folderList"></div>
+      <div class="frow" style="margin:16px 0 0"><label>新建文件夹并移入</label>
+        <input id="newFolderName" placeholder="输入文件夹名称，回车确认">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 设置 -->
+<div class="modal-mask" id="setMask">
+  <div class="modal">
+    <header>设置 · Agent（大模型）接入<button class="x" data-close="setMask">×</button></header>
+    <div class="body">
+      <div class="frow"><label>🚀 免费引擎一键接入（点一下自动填好，注册后粘贴你自己的 Key 即用）</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
+          <button class="btn" data-preset="zhipu">智谱 GLM-4-Flash（永久免费·推荐）</button>
+          <button class="btn" data-preset="silicon">硅基流动（免费小模型）</button>
+          <button class="btn" data-preset="bailian">阿里云百炼（新人 100万 tokens）</button>
+          <button class="btn" data-preset="openrouter">OpenRouter（海外免费档）</button>
+        </div>
+        <div class="hint">每家额度跟你的账号走，互不共享：智谱 Flash 系列<strong>不按 token 计费</strong>（只有频率限制）；硅基流动有常驻免费小模型（需实名，免费模型清单会轮换）；百炼新人每模型 100万 tokens、90 天有效；OpenRouter 免费档约 50 次/天。点按钮会自动填 Base URL 和模型名并打开注册页，Key 创建后粘贴到下方即可。</div></div>
+      <div class="frow"><label>API Base URL（OpenAI 兼容）</label>
+        <input id="sBase" placeholder="https://api.deepseek.com/v1">
+        <div class="hint">以 /v1 结尾。DeepSeek：https://api.deepseek.com/v1；通义：https://dashscope.aliyuncs.com/compatible-mode/v1；OpenAI：https://api.openai.com/v1</div></div>
+      <div class="frow"><label>API Key</label><input id="sKey" type="password" placeholder="sk-...（仅保存在本机）"></div>
+      <div class="fgrid">
+        <div class="frow"><label>模型名称</label><input id="sModel" placeholder="deepseek-chat"></div>
+        <div class="frow"><label>并发请求数</label><input id="sConc" type="number" min="1" max="6" value="2"></div>
+        <div class="frow"><label>请求间隔 (ms)</label><input id="sGap" type="number" min="0" max="10000" step="100" value="1000">
+          <div class="hint">防 429 限流：两次请求的最小间隔；触发限流时会自动退避重试</div></div>
+      </div>
+      <div class="frow"><label>温度（0~1）</label><input id="sTemp" type="number" min="0" max="1" step="0.1" value="0.3"></div>
+      <div class="frow"><label style="display:flex;align-items:center;gap:8px;font-weight:600;color:var(--ink)">
+        <input type="checkbox" id="sFallback" checked style="width:auto">
+        Agent 无余额/报错时自动降级到免费公共翻译（无需 Key，精度较低）</label>
+        <div class="hint">免费引擎是公共翻译服务，仅供兜底：术语、公式、长难句质量明显不如 Agent，正式精读建议用 Agent 重译。</div></div>
+      <div class="hint" style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 12px">
+        API Key 只存本机浏览器，不上传任何服务器。若提示 CORS/跨域错误，说明该 API 未开放网页直连，换 DeepSeek / 智谱 / 通义等即可。
+      </div>
+      <div class="hint" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:9px 12px;margin-top:10px">
+        ♾️ <b>无限离线翻译方案</b>：在本机装 <b>Ollama</b>（设置环境变量 OLLAMA_ORIGINS="*" 后重启）、<b>LM Studio</b>（开启 CORS 选项）或 llama.cpp 服务器（默认允许跨域），拉一个 Qwen3-8B 级别的模型，然后把上方 Base URL 填为
+        <code>http://localhost:11434/v1</code>（Ollama）或对应端口、模型名填本地模型名、Key 随便填一个非空值——完全离线、无任何额度限制，且质量远高于免费公共引擎。
+      </div>
+    </div>
+    <footer>
+      <button class="btn" id="btnDetectLocal">🔍 检测本地模型</button>
+      <button class="btn" id="btnTest">测试连接</button>
+      <button class="btn" id="btnUpdate" style="display:none">检查更新</button>
+      <button class="btn" id="btnAbout" style="display:none">关于</button>
+      <button class="btn primary" id="btnSave">保存</button>
+    </footer>
+  </div>
+</div>
+
+<!-- Agent 分析 -->
+<div class="modal-mask" id="anaMask">
+  <div class="modal wide">
+    <header>⚡ Agent 分析报告<button class="x" data-close="anaMask">×</button></header>
+    <div class="body">
+      <div id="steps"></div>
+      <div id="report" class="empty-report"></div>
+    </div>
+    <footer>
+      <button class="btn" id="btnRerun" style="display:none">重新分析</button>
+      <button class="btn" id="btnExportReport" style="display:none">导出报告 (.md)</button>
+      <button class="btn primary" id="btnCloseAna">完成</button>
+    </footer>
+  </div>
+</div>
+
+<div id="lightbox"><img alt="放大查看"></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ================= 基础工具 ================= */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const store={
+  get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},
+};
+const SET_KEY='ptx_settings_v2';
+function getSettings(){return Object.assign({base:'https://api.deepseek.com/v1',key:'',model:'deepseek-chat',conc:2,temp:0.3,gap:1000,fallback:true},store.get(SET_KEY,{}))}
+function toast(msg,ms){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),ms||2600)}
+function hash(s){let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return (h>>>0).toString(36)}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function download(name,content,mime){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type:(mime||'text/markdown')+';charset=utf-8'}));
+  a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+}
+function fmtTime(ts){const d=new Date(ts);return d.toLocaleDateString()+' '+d.toLocaleTimeString().slice(0,5)}
+function renderMath(el){
+  if(window.renderMathInElement) try{renderMathInElement(el,{delimiters:[
+    {left:'$$',right:'$$',display:true},{left:'\\[',right:'\\]',display:true},
+    {left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false}],
+    throwOnError:false})}catch(e){}
+}
+
+/* ================= IndexedDB 文献库 ================= */
+function idbOpen(){return new Promise((res,rej)=>{
+  const r=indexedDB.open('ptx_library',1);
+  r.onupgradeneeded=e=>{e.target.result.createObjectStore('docs',{keyPath:'id'})};
+  r.onsuccess=e=>res(e.target.result);r.onerror=()=>rej(r.error);
+})}
+let _db=null;
+async function db(){if(!_db)_db=await idbOpen();return _db}
+function tx(mode,fn){return db().then(d=>new Promise((res,rej)=>{
+  const t=d.transaction('docs',mode);const q=fn(t.objectStore('docs'));
+  q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);
+}))}
+const dbAll=()=>tx('readonly',s=>s.getAll());
+const dbGet=id=>tx('readonly',s=>s.get(id));
+const dbPut=doc=>tx('readwrite',s=>s.put(doc));
+const dbDel=id=>tx('readwrite',s=>s.delete(id));
+
+/* ================= 全局状态 ================= */
+const S={doc:null,busy:false,pendingQuote:null,chatBusy:false};
+let _saveTimer=null;
+function saveDoc(){clearTimeout(_saveTimer);const doc=S.doc;_saveTimer=setTimeout(async()=>{
+  if(!doc)return; // 绑定调用时的文献对象，切换文献后不会误写
+  doc.lastReadAt=Date.now();
+  try{await dbPut(doc)}catch(e){toast('本地保存失败：'+e.message)}
+},700)}
+
+/* ================= LLM 调用 ================= */
+let _apiChain=Promise.resolve(),_lastApiAt=0;
+function pace(){ // 全局串行 + 最小间隔，从源头规避 429 限流
+  const job=async()=>{
+    const s=getSettings();
+    const wait=(_lastApiAt+(s.gap||1000))-Date.now();
+    if(wait>0)await new Promise(r=>setTimeout(r,wait));
+    _lastApiAt=Date.now();
+  };
+  const run=_apiChain.then(job,job);
+  _apiChain=run.then(()=>{},()=>{});
+  return run;
+}
+async function chatRaw(messages,temp){
+  const s=getSettings();
+  if(!s.key) throw new Error('请先在「设置」中填写 API Key');
+  const res=await fetch(s.base.replace(/\/+$/,'')+'/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.key},
+    body:JSON.stringify({model:s.model,messages,temperature:temp==null?s.temp:temp})
+  });
+  if(!res.ok){
+    const t=await res.text().catch(()=>'');
+    const err=new Error('API '+res.status+'：'+t.slice(0,200));
+    err.status=res.status;
+    throw err;
+  }
+  const j=await res.json();
+  if(!j.choices||!j.choices[0]) throw new Error('API 返回异常：'+JSON.stringify(j).slice(0,200));
+  return (j.choices[0].message.content||'').trim();
+}
+async function chat(messages,temp){
+  const delays=[2000,5000,12000];
+  for(let a=0;a<=delays.length;a++){
+    await pace();
+    try{return await chatRaw(messages,temp)}
+    catch(e){
+      if((e.status===429||/429/.test(e.message))&&a<delays.length){
+        toast('触发服务商限流(429)，'+Math.round(delays[a]/1000)+' 秒后自动重试…（可在设置里增大「请求间隔」）',delays[a]);
+        await new Promise(r=>setTimeout(r,delays[a]));
+        continue;
+      }
+      throw e;
+    }
+  }
+}
+async function runQueue(items,worker,conc){
+  conc=Math.max(1,Math.min(6,conc||2));
+  let idx=0;
+  const runners=new Array(Math.min(conc,items.length)).fill(0).map(async()=>{
+    while(idx<items.length){const my=idx++;await worker(items[my])}
+  });
+  await Promise.all(runners);
+}
+
+/* ================= PDF 解析（→ 段落数组） ================= */
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+function mode(arr){const m=new Map();let best='',n=0;arr.forEach(v=>{const k=String(v);m.set(k,(m.get(k)||0)+1);if(m.get(k)>n){n=m.get(k);best=v}});return best}
+function joinItems(items){let out='';for(let i=0;i<items.length;i++){const it=items[i],pv=items[i-1];
+  if(pv&&it.x-(pv.x+pv.w)>0.9)out+=' ';out+=it.str}
+  return out
+  .replace(/ﬁ/g,'fi').replace(/ﬂ/g,'fl').replace(/ﬀ/g,'ff').replace(/ﬃ/g,'ffi').replace(/ﬄ/g,'ffl')
+  .replace(/\uFFFD/g,'').replace(/[\uE000-\uF8FF]/g,'')
+  .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'')
+  .replace(/\s+/g,' ').trim()}
+let _absSeen=false; // 首页作者/单位降级开关：见到 Abstract 行后关闭（跨栏跨页保持，parsePDF 开头重置）
+function mergeLines(lines,bodyFs){
+  if(!lines.length)return[];
+  const fsMode=mode(lines.map(l=>Math.round(l.fs*2)/2));
+  const xs=lines.map(l=>l.x0).sort((a,b)=>a-b);
+  const colX0=xs[Math.floor(xs.length*0.08)];
+  let colX1=0;lines.forEach(l=>{colX1=Math.max(colX1,l.x1)});
+  const colW=colX1-colX0||600;
+  const out=[];let cur=null,prev=null,prevHead=false;
+  for(const L of lines){
+    const gapP=prev?L.top-(prev.top+prev.fs):0;
+    // 跳过孤立的疑似页码（前后间距大的纯数字短行）；标题字号的编号行（"2" "III"）豁免
+    if(/^[\d\s•.]+$/.test(L.text)&&L.text.length<6&&gapP>fsMode*1.3&&L.fs<=(bodyFs||fsMode)*1.1)continue;
+    if(/^arXiv:\d{4}\.\d{4,5}/.test(L.text))continue; // arXiv 侧边时间戳
+    // 正文换行会把 "Fig. 4." 顶到行首——只有"行连续的未收尾长句"才可信句子中段：
+    // ① 与上一行行距正常（≤1.55 行高——隔了一整张图的行显然不是句子续行）
+    // ② 长度 ≥40 字符且正常英文词占 token 多数（图内轴标签段 "std/20/40" 数字混杂不是句子）③ 以小写词收尾
+    const prevTxt=cur?cur.text.trim():'';
+    const prevToks=prevTxt.split(/\s+/).filter(Boolean);
+    const prevWords=prevToks.filter(t=>/^[A-Za-z]{3,}[.,;:]?$/.test(t)).length;
+    const lineGap=prev?L.top-(prev.top+prev.fs):1e9;
+    const midSent=cur&&cur.type==='body'&&lineGap<=fsMode*1.55&&prevTxt.length>=40&&prevWords>=prevToks.length*0.5&&/[a-z,]$/.test(prevTxt);
+    const isCap=!midSent&&/^(?:[Ff]ig(?:ure)?|[Tt]able)\s*\.?\s*\d+(?:\s+[A-Z0-9(]|\s*[.:]|\([a-z0-9]\))/.test(L.text); // 数字后跟标点，或无标点但下一个词大写词首（Nature "Fig. 1 Overview"）；"Table 8 shows..."小写动词仍拒绝
+    // 标题判定：①字号≥全局正文基准×1.18；或②整行粗体（Springer 小标题字号=正文，仅靠字体粗细区分——"Data Representation" 类；
+    // run-in 粗体导语"Architecture. We ablate…"整行粗体占比<0.75 不会误判）；或③编号+标题词模式
+    // 首页作者名/单位降级：作者行（2-4 个 Titlecase 词）与单位行（University/Institute/@邮箱…）在 Abstract 之前
+    // 出现时不是章节标题（CVPR "Ruopeng Gao"、"1State Key Laboratory…" 会污染目录）——仅限首页+未见 Abstract，避免误伤 "Related Work"
+    const numberedHead=/^\s*(\d+|[IVX]+)\.?\s+[A-Z][^.]{2,60}$/.test(L.text)&&L.fs>=fsMode&&L.text.length<70;
+    if(L.page===1&&!_absSeen&&!isCap&&!numberedHead){
+      const t=L.text.trim();
+      const affil=/@\w+|\b(?:University|Institute|Laborator(?:y|ies)|College|Department|Academy|Corporation|Co\.,|Ltd\.?|School of)\b/i.test(t)&&t.length<95;
+      // 作者名行：2-8 个 Titlecase 词（允许逗号/连字符分隔，"Hyun-Sung Yang, Sung-Wook Park, Chun-Bo Sim"）；
+      // 全大写缩写词（AI/USA）允许，但含小写连接词（of/and/for）的真标题不降
+      const toks=t.split(/[,\s]+/).filter(Boolean);
+      const nameLike=t.length<60&&toks.length>=2&&toks.length<=8&&toks.every(k=>/^[A-Z][A-Za-z'’\u00C0-\u024F\-]*$/.test(k)&&(/[a-z]/.test(k)||k.length<=3));
+      if(affil||nameLike)L._meta=true;
+    }
+    if(/\bAbstract\b|\bABSTRACT\b|\b摘要\b/i.test(L.text))_absSeen=true;
+    const fsTh=(bodyFs||fsMode)*1.18;
+    const boldHead=L.boldFrac!=null&&L.boldFrac>0.75&&L.fs>=(bodyFs||fsMode)*0.95&&L.text.trim().length<65&&
+      !/[.。,;:!?]$/.test(L.text.trim())&&!/^[\d\s.]+$/.test(L.text.trim())&&/^[A-Z\u4e00-\u9fa5]/.test(L.text.trim());
+    const isHead=!isCap&&!L._meta&&(
+      (L.fs>=fsTh&&L.text.length<95)
+      ||boldHead
+      ||numberedHead
+    );
+    let flush=false,head=false;
+    if(isCap){flush=true;head=true}
+    // 图注续句并入：cur 是图注且当前行是它的续句——①被图盒吞过的续行（_capCont）②短小写尾行（"are reported over MQTT."）
+    // → 不分段直接并入；续行算"块尾"（head=true），下一行照常强制分段，正文不得混入图注
+    else if(cur&&cur.type==='caption'&&lineGap<=fsMode*1.55&&
+      (L._capCont===true||(L.text.trim().length<40&&/^[a-z(]/.test(L.text.trim()))))head=true;
+    else if(isHead){flush=true;head=true}
+    else if(prevHead)flush=true; // 标题行之后强制分段，防止标题吞掉后续正文
+    else if(!prev)flush=true;
+    else{
+      const gap=L.top-(prev.top+prev.fs);
+      const indented=L.x0>colX0+Math.max(6,fsMode*0.6);
+      const prevFull=prev.x1>colX1-colW*0.14;
+      const prevShort=prev.x1<colX1-colW*0.42;
+      if(gap>fsMode*1.55)flush=true;
+      else if(indented&&prevFull)flush=true;
+      else if(prevShort)flush=true;
+      else if(Math.abs(L.fs-prev.fs)>1.6)flush=true;
+    }
+    if(flush){if(cur&&cur.text)out.push(cur);cur={type:isCap?'caption':(head?'head':'body'),page:L.page,text:L.text,top0:L.top}}
+    else{
+      if(cur.text.endsWith('-')&&/[a-z]$/.test(cur.text.slice(0,-1)))cur.text=cur.text.slice(0,-1)+L.text;
+      else cur.text+=' '+L.text;
+    }
+    prev=L;prevHead=isHead;
+  }
+  if(cur&&cur.text)out.push(cur);
+  return out;
+}
+/* ---- 图形区域检测（一次遍历操作符列表）：位图取 paint 位置；矢量图取 constructPath 墨量聚簇 ---- */
+async function graphicRegions(page,H){
+  const OPS=pdfjsLib.OPS;const bitmap=[];const fills=[];const pts=[];
+  let ops;try{ops=await page.getOperatorList()}catch(e){return []}
+  let ctm=[1,0,0,1,0,0];const stack=[];let pathBuf=[];
+  const mul=(a,b)=>[a[0]*b[0]+a[1]*b[2],a[0]*b[1]+a[1]*b[3],a[2]*b[0]+a[3]*b[2],a[2]*b[1]+a[3]*b[3],a[4]*b[0]+a[5]*b[2]+b[4],a[4]*b[1]+a[5]*b[3]+b[5]];
+  const tf=(m,x,y)=>[m[0]*x+m[2]*y+m[4],m[1]*x+m[3]*y+m[5]];
+  const N={};if(OPS.moveTo!=null)N[OPS.moveTo]=2;if(OPS.lineTo!=null)N[OPS.lineTo]=2;
+  if(OPS.curveTo!=null)N[OPS.curveTo]=6;if(OPS.curveTo2!=null)N[OPS.curveTo2]=4;if(OPS.curveTo3!=null)N[OPS.curveTo3]=4;
+  if(OPS.closePath!=null)N[OPS.closePath]=0;if(OPS.rectangle!=null)N[OPS.rectangle]=4;
+  const bufBBox=b=>{
+    let x0=1e9,x1=-1e9,t0=1e9,t1=-1e9;
+    b.forEach(p=>{x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);t0=Math.min(t0,H-p[1]);t1=Math.max(t1,H-p[1])});
+    return {x0,x1,t0,t1};
+  };
+  for(let i=0;i<ops.fnArray.length;i++){
+    const fn=ops.fnArray[i],args=ops.argsArray[i];
+    if(fn===OPS.save)stack.push(ctm.slice());
+    else if(fn===OPS.restore){if(stack.length)ctm=stack.pop()}
+    else if(fn===OPS.transform)ctm=mul(args,ctm);
+    else if(fn===OPS.paintImageXObject||fn===OPS.paintJpegXObject||fn===OPS.paintInlineImageXObject){
+      const cor=[tf(ctm,0,0),tf(ctm,1,0),tf(ctm,0,1),tf(ctm,1,1)];
+      const xs=cor.map(c=>c[0]),ys=cor.map(c=>c[1]);
+      const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+      if(x1-x0<45||y1-y0<45)continue;
+      bitmap.push({x0,x1,ptt:H-y1,ptb:H-y0,ink:1e9});
+    }
+    else if(fn===OPS.constructPath){
+      pathBuf=[];let k=0;const cmds=args[0],coords=args[1];
+      for(const c of cmds){
+        const n=N[c]||0;
+        if(c===OPS.rectangle){
+          const [x,y,w,h]=coords.slice(k,k+4);
+          const p1=tf(ctm,x,y),p2=tf(ctm,x+w,y+h),p3=tf(ctm,x+w,y),p4=tf(ctm,x,y+h);
+          pathBuf.push(p1,p2,p3,p4);
+        }else if(n){for(let j=0;j<n;j+=2){const p=tf(ctm,coords[k+j],coords[k+j+1]);pathBuf.push(p)}}
+        k+=n;
+      }
+    }
+    else if(fn===OPS.fill||fn===OPS.eoFill){
+      // 填充路径（含 eoFill 的椭圆/曲线区域）：按路径包围盒计墨量
+      if(pathBuf.length>=3){
+        const bb=bufBBox(pathBuf);
+        const a=(bb.x1-bb.x0)*(bb.t1-bb.t0);
+        if(a>=4&&a<0.5*H*H)fills.push({x0:bb.x0,x1:bb.x1,t0:bb.t0,t1:bb.t1,a});
+      }
+      pathBuf=[];
+    }
+    else if(fn===OPS.stroke){
+      pathBuf.forEach(p=>pts.push({x:p[0],t:H-p[1]}));
+      pathBuf=[];
+    }
+    else if(fn===OPS.endPath)pathBuf=[];
+  }
+  // 实心块聚簇（按面积降序贪心合并，间距容忍 20pt）；n 记录簇内填充项数（小元素密集型示意图的判据）
+  const clusters=[];
+  fills.sort((a,b)=>b.a-a.a).forEach(f=>{
+    const c=clusters.find(o=>!(f.x0>o.x1+20||f.x1<o.x0-20||f.t0>o.t1+20||f.t1<o.t0-20));
+    if(c){c.x0=Math.min(c.x0,f.x0);c.x1=Math.max(c.x1,f.x1);c.t0=Math.min(c.t0,f.t0);c.t1=Math.max(c.t1,f.t1);c.ink+=f.a;c.n=(c.n||1)+1}
+    else clusters.push({x0:f.x0,x1:f.x1,t0:f.t0,t1:f.t1,ink:f.a,n:1});
+  });
+  // 判定前的同高水平合并：示意图元素常横向铺开、间隙>20pt 拆成多簇——垂直重叠≥60%、水平间隙<90pt 的簇先合成一整条再判
+  {
+    // 判定前的同高水平合并：示意图元素常横向铺开、间隙>20pt 拆成多簇——垂直重叠≥60%、水平间隙<120pt 的簇先合成一整条再判（簇多时 O(n³) 退化，>200 簇跳过：此类页面必有 ink 达标大图）
+    if(clusters.length<=200){
+    let ch=true;
+    while(ch){
+      ch=false;
+      outer:for(let i=0;i<clusters.length;i++)for(let j=i+1;j<clusters.length;j++){
+        const a=clusters[i],b=clusters[j];
+        const ov=Math.min(a.t1,b.t1)-Math.max(a.t0,b.t0);
+        const mh=Math.min(a.t1-a.t0,b.t1-b.t0)||1;
+        const hgap=b.x0>a.x1?(b.x0-a.x1):(a.x0>b.x1?(a.x0-b.x1):0);
+        if(ov/mh>=0.6&&hgap<120){ // 120pt：pipeline 式示意图元素链间隙可达 110pt
+          a.x0=Math.min(a.x0,b.x0);a.x1=Math.max(a.x1,b.x1);a.t0=Math.min(a.t0,b.t0);a.t1=Math.max(a.t1,b.t1);
+          a.ink+=b.ink;a.n=(a.n||1)+(b.n||1);
+          clusters.splice(j,1);ch=true;break outer;
+        }
+      }
+    }
+    }
+  }
+  // 判定矢量图：墨量达标；或小元素密集带（pipeline 式示意图：单项面积小但元素多、横向铺开）
+  const vec=clusters.filter(c=>(c.ink>=1500&&(c.t1-c.t0)>=35&&(c.x1-c.x0)>=40)
+    ||(c.n>=6&&(c.x1-c.x0)>=180&&(c.t1-c.t0)>=25));
+  // 线条点云聚簇（无填充柱状图/曲线图）：先归入附近实心簇扩展包围盒，独立密集点云单独成区
+  const orphan=[];
+  pts.forEach(p=>{
+    const c=clusters.find(o=>o.ink>=1500&&p.x>=o.x0-25&&p.x<=o.x1+25&&p.t>=o.t0-25&&p.t<=o.t1+25);
+    if(c){c.x0=Math.min(c.x0,p.x-4);c.x1=Math.max(c.x1,p.x+4);c.t0=Math.min(c.t0,p.t-4);c.t1=Math.max(c.t1,p.t+4)}
+    else orphan.push(p);
+  });
+  const sCl=[];
+  orphan.forEach(p=>{
+    const c=sCl.find(o=>p.x>=o.x0-14&&p.x<=o.x1+14&&p.t>=o.t0-14&&p.t<=o.t1+14);
+    if(c){c.x0=Math.min(c.x0,p.x-4);c.x1=Math.max(c.x1,p.x+4);c.t0=Math.min(c.t0,p.t-4);c.t1=Math.max(c.t1,p.t+4);c.n++}
+    else sCl.push({x0:p.x-4,x1:p.x+4,t0:p.t-4,t1:p.t+4,n:1});
+  });
+  // 点云二级串联：元素簇同高（垂直重叠≥70%）、水平间隙<120pt 时合并（pipeline 示意图的框/箭头链）；簇多时跳过防 O(n³)
+  if(sCl.length<=200){
+    let ch=true;
+    while(ch){
+      ch=false;
+      outer:for(let i=0;i<sCl.length;i++)for(let j=i+1;j<sCl.length;j++){
+        const a=sCl[i],b=sCl[j];
+        const ov=Math.min(a.t1,b.t1)-Math.max(a.t0,b.t0);
+        const mh=Math.min(a.t1-a.t0,b.t1-b.t0)||1;
+        const hgap=b.x0>a.x1?(b.x0-a.x1):(a.x0>b.x1?(a.x0-b.x1):0);
+        if(ov/mh>=0.7&&hgap<120){
+          a.x0=Math.min(a.x0,b.x0);a.x1=Math.max(a.x1,b.x1);a.t0=Math.min(a.t0,b.t0);a.t1=Math.max(a.t1,b.t1);a.n+=b.n;
+          sCl.splice(j,1);ch=true;break outer;
+        }
+      }
+    }
+  }
+  const strokeFigs=sCl.filter(o=>o.n>=120&&(o.t1-o.t0)>=35&&(o.x1-o.x0)>=40).map(o=>({x0:o.x0,x1:o.x1,ptt:o.t0,ptb:o.t1,ink:o.n}));
+  // 矢量簇回填墨量标记 + 盒合并：近距重叠合并；同高并排的多子图（垂直重叠≥80% 且水平间隙<90pt）也合成一整块
+  const merged=[];
+  [...bitmap,...vec.map(c=>({x0:c.x0,x1:c.x1,ptt:c.t0,ptb:c.t1,ink:c.ink})),...strokeFigs].forEach(b=>{
+    const m=merged.find(o=>{
+      const hgap=b.x0>o.x1?(b.x0-o.x1):(o.x0>b.x1?(o.x0-b.x1):0);
+      if(hgap<=12&&!(b.ptt>o.ptb+12||b.ptb<o.ptt-12))return true;
+      const ov=Math.min(b.ptb,o.ptb)-Math.max(b.ptt,o.ptt);
+      const mh=Math.min(b.ptb-b.ptt,o.ptb-o.ptt)||1;
+      return hgap<90&&ov/mh>=0.8;
+    });
+    if(m){m.x0=Math.min(m.x0,b.x0);m.x1=Math.max(m.x1,b.x1);m.ptt=Math.min(m.ptt,b.ptt);m.ptb=Math.max(m.ptb,b.ptb);m.ink=Math.max(m.ink,b.ink)}
+    else merged.push({...b});
+  });
+  // 第二趟：同高并排的子图簇（垂直重叠≥60%、水平间隙<35pt，跨栏多子图 Figure）合成一整块
+  let changed=true;
+  while(changed){
+    changed=false;
+    outer:for(let i=0;i<merged.length;i++)for(let j=i+1;j<merged.length;j++){
+      const a=merged[i],b=merged[j];
+      const ov=Math.min(a.ptb,b.ptb)-Math.max(a.ptt,b.ptt);
+      const mh=Math.min(a.ptb-a.ptt,b.ptb-b.ptt)||1;
+      const hgap=b.x0>a.x1?(b.x0-a.x1):(a.x0>b.x1?(a.x0-b.x1):0);
+      if(ov/mh>=0.6&&hgap<35){
+        a.x0=Math.min(a.x0,b.x0);a.x1=Math.max(a.x1,b.x1);a.ptt=Math.min(a.ptt,b.ptt);a.ptb=Math.max(a.ptb,b.ptb);a.ink=Math.max(a.ink,b.ink);
+        merged.splice(j,1);changed=true;break outer;
+      }
+    }
+  }
+  return merged;
+}
+/* ---- 整页渲染 + 区域裁剪：由 pdf.js 渲染器合成透明/蒙版/矢量线，所见即所得，杜绝空框 ---- */
+async function cropRegions(page,boxes){
+  if(!boxes.length)return [];
+  let cv;
+  try{
+    const scale=2;
+    const vp=page.getViewport({scale});
+    cv=document.createElement('canvas');
+    cv.width=Math.ceil(vp.width);cv.height=Math.ceil(vp.height);
+    await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+  }catch(e){return []}
+  const W=2,OUT=boxes.map(b=>{
+    const pad=b.pad!=null?b.pad:10; // 表格盒自带精确边界，只留 3pt 兜住表格线；图形区域默认 10pt 呼吸空间
+    const x=Math.max(0,(b.x0-pad)*W),y=Math.max(0,(b.ptt-pad)*W);
+    const w=Math.min(cv.width-x,(b.x1-b.x0+pad*2)*W),h=Math.min(cv.height-y,(b.ptb-b.ptt+pad*2)*W);
+    const mn=b.min||60; // 公式盒是单行也合法（24pt 高），独立更小的最小尺寸
+    if(w<mn||h<mn)return null;
+    const c2=document.createElement('canvas');
+    const sc=Math.min(1,1200/Math.max(w,h));
+    c2.width=Math.round(w*sc);c2.height=Math.round(h*sc);
+    c2.getContext('2d').drawImage(cv,x,y,w,h,0,0,c2.width,c2.height);
+    return {top:b.ptt,src:c2.toDataURL('image/jpeg',0.85)};
+  });
+  return OUT; // 与 boxes 一一对应（失败的槽位为 null），不打乱索引
+}
+/* ---- 图表行识别（矢量图刻度/图例/表格行）：连续成串 → 数据块，不进正文不翻译 ---- */
+function isChartLine(L){
+  const t=(L.text||'').trim();if(!t)return false;
+  if(/^(Fig|Figure|Table)\s*\.?\s*\d/i.test(t))return false; // 图注永远算正文
+  const toks=t.split(/\s+/);
+  let words=0;toks.forEach(k=>{if(/^[A-Za-z]{3,}[.,;:]*$/.test(k))words++});
+  const numch=(t.match(/[\d.,:%()\/×\-+=\[\]]/g)||[]).length;
+  const ratio=numch/t.length;
+  if(toks.length<3)return t.length<=16&&words===0;            // 刻度、(a)(b)(c) 之类短标签
+  if(ratio>0.5&&words<=2)return true;                          // 数字密集行（表格行/轴刻度串）
+  if(toks.length>=3&&toks.length<=24&&words===0&&toks.every(k=>/\d/.test(k)))return true; // 图例行（Yolov8n…）
+  return false;
+}
+const colOf=(x,mid)=>x.x1<=mid+8?'L':(x.x0>=mid-8?'R':'C');
+/* ---- 表格网格检测：连续行块（≥4 行、行距紧凑）共享 ≥3 个对齐列起点 → 整表渲染成图 ---- */
+function detectTableBlocks(lines,wide){
+  // 排除页码行（与表格垂直连续会被误并进块，拉高 box 到页眉区）与图注/表注行（caption 应独立成段可翻译）
+  const usable=lines.filter(L=>{
+    const t=L.text.trim();
+    if(/^\d{1,3}$/.test(t))return false;
+    if(/^(?:[Ff]ig(?:ure)?|[Tt]able)\s*\.?\s*\d+(?:\s+[A-Z0-9(]|\s*[.:]|\([a-z0-9]\))/.test(t))return false;
+    return true;
+  });
+  const out=[];if(usable.length<4)return out;
+  let fsMode=0;{const m=new Map();let n=0;usable.forEach(l=>{const k=Math.round(l.fs);m.set(k,(m.get(k)||0)+1);if(m.get(k)>n){n=m.get(k);fsMode=k}});fsMode=fsMode||10}
+  // 1) 逻辑行合并：同高（y 重叠）的多条物理行合成一个逻辑行——表格列间距常 >9pt，行聚类会把表格拆成孤立列
+  const sorted=[...usable].sort((a,b)=>a.top-b.top);
+  const logical=[];
+  for(const L of sorted){
+    const g=logical[logical.length-1];
+    if(g&&L.top-(g.top+g.fs)<=fsMode*0.5){g.lines.push(L);g.top=Math.min(g.top,L.top);g.fs=Math.max(g.fs,L.fs)}
+    else logical.push({top:L.top,fs:L.fs,lines:[L]});
+  }
+  // 2) 逻辑行成块：垂直间距连续（表格行距宽松，阈值 2.6 行高）
+  let block=[];
+  const flush=()=>{
+    // 首尾修剪：块首/块尾连续的单物理行逻辑行多为 caption 续行或正文行（表格行必有 ≥2 并排物理列），最多各修 3 行
+    let cut=3;
+    while(cut-->0&&block.length&&block[0].lines.length<2)block.shift();
+    cut=3;
+    while(cut-->0&&block.length&&block[block.length-1].lines.length<2)block.pop();
+    const nRows=block.length;
+    if(nRows>=4){
+      const phys=block.flatMap(g=>g.lines);
+      const h=Math.max(...phys.map(l=>l.top+l.fs))-Math.min(...phys.map(l=>l.top));
+      if(h>36){
+        // 表格强特征：≥50% 的逻辑行有 ≥2 条并排物理行（正文每行只有 1 条）；
+        // 物理行平均长度 < 32 字符（表格列内容短；双栏参考文献并排行 80+ 字符会被误吞，靠此排除）；
+        // 辅以 ≥2 个共享对齐列起点
+        const multi=block.filter(g=>g.lines.length>=2).length;
+        const avgLen=phys.reduce((s,l)=>s+l.text.length,0)/phys.length;
+        const colStarts=new Map();
+        block.forEach(g=>{const seen=new Set();g.lines.forEach(L=>L.items.forEach(it=>{const k=Math.round(it.x/8)*8;if(!seen.has(k)){seen.add(k);colStarts.set(k,(colStarts.get(k)||0)+1)}}))});
+        let shared=0;colStarts.forEach(c=>{if(c>=Math.max(3,Math.ceil(nRows*0.4)))shared++});
+        let ok=multi>=Math.ceil(nRows*0.5)&&avgLen<32&&shared>=2;
+        if(ok&&wide){ // 宽表（跨栏）模式追加判据：双栏正文每个逻辑行只有 L+R 两条物理行，宽表一行有 ≥3 列
+          const tri=block.filter(g=>g.lines.length>=3).length;
+          ok=tri>=Math.ceil(nRows*0.3);
+        }
+        if(ok){
+          out.push({x0:Math.min(...phys.map(l=>l.x0)),x1:Math.max(...phys.map(l=>l.x1)),
+            ptt:Math.min(...phys.map(l=>l.top)),ptb:Math.max(...phys.map(l=>l.top+l.fs)),lines:phys});
+        }
+      }
+    }
+    block=[];
+  };
+  logical.forEach(g=>{
+    if(!block.length||g.top-(block[block.length-1].top+block[block.length-1].fs)<=fsMode*2.6)block.push(g);
+    else{flush();block=[g]}
+  });
+  flush();
+  return out;
+}
+async function parsePDF(file){
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  const PAGES=[]; // 每页 {no,page,H,W,lines,boxes}
+  let W=600,bodyFs=0;
+  _absSeen=false; // 每篇文档重置首页作者/单位降级开关
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const vp=page.getViewport({scale:1});
+    const H=vp.height;W=vp.width;
+    const boxes=await graphicRegions(page,H);
+    const tc=await page.getTextContent();
+    // 字体真实名称识别（graphicRegions 的 getOperatorList 已把 commonObjs 预热）：bold=小标题字体，math=Computer Modern 数学字体=公式
+    const fontFlags=new Map();
+    const fstat=id=>{
+      if(fontFlags.has(id))return fontFlags.get(id);
+      const r={bold:false,math:false};
+      try{
+        if(page.commonObjs&&page.commonObjs.has(id)){
+          const o=page.commonObjs.get(id);
+          const nm=((o&&o.name)||'')+''+((o&&o.loadedName)||'');
+          r.bold=/bold|black|heavy|semibold|sfbx|cmbx|bf[0-9]|\bbx\b/i.test(nm);
+          r.math=/cmr|cmmi|cmsy|cmex|cmbx|cmti|mathematical|math[0-9]|lasy|wasy|msam|msbm|euclid|txfonts|pxfonts/i.test(nm);
+        }
+      }catch(e){}
+      fontFlags.set(id,r);return r;
+    };
+    const items=tc.items.filter(it=>it.str&&it.str.trim()).map(it=>{
+      const t=it.transform,fs=Math.hypot(t[2],t[3])||it.height||10;
+      const fl=it.fontName?fstat(it.fontName):{bold:false,math:false};
+      return{str:it.str,x:t[4],y:t[5],w:it.width||0,h:it.height||fs,fs,bold:fl.bold,math:fl.math};
+    });
+    items.sort((a,b)=>(H-(a.y+a.h))-(H-(b.y+b.h)));
+    const pageLines=[];
+    for(const it of items){
+      const top=H-(it.y+it.h);
+      const L=pageLines[pageLines.length-1];
+      const hgap=L?it.x-L.maxX:99;
+      // 纯编号 item（"2"/"III."）与后续标题词之间常有 10-25pt 间隙——排版惯例，放宽到 26 合并
+      const tailStr=L&&L.items.length?L.items[L.items.length-1].str.trim():'';
+      const numBridge=L&&/^\s*(\d+|[IVX]{1,4})\.?\s*$/.test(tailStr)&&/^[A-Z]/.test(it.str.trim());
+      // hgap<0 = item 起点在当前行 x 范围之前。两类：①真跨栏/换块（gap 深负，绝不并）②同 y 行内字形互锁
+      // （Nature "Fig. 1" 字符盒右缘压过 "." 起点近 4pt）——小负间隙(-6..-1)是同一视觉行，允许并入（items 稍后按 x 重排）
+      const okGap=(hgap>=-6&&hgap<9)||(numBridge&&hgap>=0&&hgap<26&&it.fs>=L.fs*0.95);
+      if(L&&Math.abs(top-L.top)<=Math.max(3,L.fs*0.45)&&okGap){
+        L.items.push(it);L.top=Math.min(L.top,top);L.maxX=Math.max(L.maxX,it.x+it.w);
+      }else pageLines.push({items:[it],top,fs:it.fs,maxX:it.x+it.w});
+    }
+    pageLines.forEach(L=>{
+      L.items.sort((a,b)=>a.x-b.x);
+      L.x0=L.items[0].x;L.x1=Math.max(...L.items.map(i=>i.x+i.w));
+      L.text=joinItems(L.items);L.fs=L.items.reduce((m,i)=>Math.max(m,i.fs),0);
+      // 行级 bold/math 字符占比（小标题=整行粗体；公式=数学字体为主）
+      let ch=0,bc=0,mc=0;
+      L.items.forEach(i=>{const n=(i.str||'').trim().length;ch+=n;if(i.bold)bc+=n;if(i.math)mc+=n});
+      L.boldFrac=ch?bc/ch:0;L.mathFrac=ch?mc/ch:0;
+      L.page=p;L.H=H;
+    });
+    PAGES.push({no:p,page,H,W,lines:pageLines.filter(L=>L.text),boxes});
+  }
+  const allLines=PAGES.flatMap(pg=>pg.lines);
+  if(!allLines.length)throw new Error('未提取到文本——这可能是扫描版 PDF，请换用文字版文献');
+  // 全局正文字号基准：取“行级字号”的众数（行 fs=该行 items 最大值），比页内基准稳，LNCS 单栏/双栏通用
+  {
+    const m=new Map();
+    allLines.forEach(L=>{const k=Math.round(L.fs*2)/2;m.set(k,(m.get(k)||0)+L.text.length)});
+    let best=0,bn=0;m.forEach((n,k)=>{if(n>bn){bn=n;best=k}});
+    bodyFs=best||10;
+  }
+  const mid=W/2;
+  const cross=allLines.filter(L=>L.x0<mid-25&&L.x1>mid+25).length;
+  const isTwo=cross<allLines.length*0.18&&allLines.length>25;
+  // 出版商水印/授权声明（IEEE Xplore 下载戳、CVPR OA 声明、ISBN 版权行、纯 URL 页脚行）：模式命中即删——这些串只会出现在水印里，且不必依赖跨页重复计数
+  {
+    const WM_RE=/Authorized licensed use|from IEEE Xplore|Restrictions apply|This article has been accepted for inclusion|This CVPR paper is the Open Access version|Except for this watermark, it is identical/i;
+    const WM_LINE=/^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9.\-]*\.[a-z]{2,6}(?:\/[a-z0-9\-._\/]*)?\s*$/i; // 整行只有 URL（nature.com/scientificreports 类页脚）——仅页顶/页底 15% 带内才删，正文区的引用 URL 不动
+    const WM_ISBN=/979-\d-\d{4}-\d{4}-\d[^\n]*IEEE/i; // 会议 ISBN 版权行 "979-8-3503-9015-5/24/$31.00 ©2024 IEEE"
+    PAGES.forEach(pg=>{pg.lines=pg.lines.filter(L=>{const t=L.text.trim();
+      if(WM_RE.test(t)||WM_ISBN.test(t))return false;
+      if(WM_LINE.test(t)&&(L.top<=pg.H*0.15||L.top+L.fs>=pg.H*0.85))return false; // pg.H = 页面高
+      return true})});
+  }
+  // 水印/页眉 logo 过滤：几何尺寸相同的图框在超过一半页面上出现 → 重复装饰。按"出现页数"计数（同页多张同尺寸照片≠水印，每页都出现才是）
+  const sig=new Map();
+  PAGES.forEach(pg=>{
+    const seen=new Set();
+    pg.boxes.forEach(b=>{
+      const k=Math.round(b.x1-b.x0)+'x'+Math.round(b.ptb-b.ptt);
+      if(!seen.has(k)){seen.add(k);sig.set(k,(sig.get(k)||0)+1)}
+    });
+  });
+  if(pdf.numPages>3)PAGES.forEach(pg=>{
+    pg.boxes=pg.boxes.filter(b=>(sig.get(Math.round(b.x1-b.x0)+'x'+Math.round(b.ptb-b.ptt))||0)<=pdf.numPages*0.5);
+  });
+  // 页眉/页脚剔除：仅统计页面顶部/底部 12% 区域的行，跨多数页面重复出现者；归一化时剥离行首/行尾页码（"10 I. Erregue et al." 与 "I. Erregue et al." 是同一页眉）
+  // 长页眉（AAAI 会议名 67 字符）会断成多个物理行——按 y 分组成视觉行、文本联合计数，删除时整组移除
+  {
+    const rep=new Map();
+    const normHead=k=>k.replace(/\s+/g,' ').replace(/^\d+\s+/,'').replace(/\s+\d+$/,'').replace(/-\s+/g,'-').trim();
+    PAGES.forEach(pg=>{
+      const seen=new Set();
+      const band=pg.lines.filter(L=>L.top<pg.H*0.12||L.top+L.fs>pg.H*0.88);
+      const groups=[];
+      band.forEach(L=>{
+        const g=groups.find(g=>Math.abs(g.top-L.top)<=3.5);
+        if(g){g.lines.push(L);g.top=Math.min(g.top,L.top)}else groups.push({top:L.top,lines:[L]});
+      });
+      groups.forEach(g=>{
+        g.norm=normHead(g.lines.slice().sort((a,b)=>a.x0-b.x0).map(l=>l.text.trim()).join(' '));
+        if(g.norm.length<95&&g.norm.length>4&&!seen.has(g.norm)){seen.add(g.norm);rep.set(g.norm,(rep.get(g.norm)||0)+1)}
+      });
+      pg._hdrGroups=groups;
+    });
+    const hdr=new Set();
+    rep.forEach((n,k)=>{if(n>=Math.max(3,Math.ceil(pdf.numPages*0.45)))hdr.add(k)});
+    // 页码锚定：与纯页码行同 y 的短行组 = 章节页眉（左章节名右页码，名称随章节变，重复计数凑不齐——如 MVTrack 的 "MVTrack 11"/"Experiments 12"）
+    const pnPages=PAGES.filter(pg=>pg.lines.some(L=>(L.top<pg.H*0.12||L.top+L.fs>pg.H*0.88)&&/^\d{1,4}$/.test(L.text.trim()))).length;
+    const anchorOK=pnPages>=Math.max(3,Math.ceil(pdf.numPages*0.45));
+    if(hdr.size||anchorOK)PAGES.forEach(pg=>{
+      pg.lines=pg.lines.filter(L=>{
+        const inHdr=L.top<pg.H*0.12||L.top+L.fs>pg.H*0.88;
+        if(!inHdr)return true;
+        const g=pg._hdrGroups.find(g=>g.lines.includes(L));
+        if(g&&hdr.has(g.norm))return false;                       // 跨页重复页眉
+        if(anchorOK&&g&&g.norm.length<45&&g.lines.some(x=>/^\d{1,4}$/.test(x.text.trim())))return false; // 章节页眉+页码同组
+        if(anchorOK&&/^\d{1,4}$/.test(L.text.trim()))return false; // 顶/底带孤立页码行
+        return true;
+      });
+      delete pg._hdrGroups;
+    });
+  }
+  const inBox=(bs,cx,cy)=>bs.some(b=>cx>=b.x0-6&&cx<=b.x1+6&&cy>=b.ptt-6&&cy<=b.ptb+6);
+  const paras=[];
+  for(const PG of PAGES){
+    const H=PG.H;
+    let regions=PG.boxes; // 位图 + 矢量图区域
+    // 巨盒修剪：≥半页的大盒（整页照片墙/跨栏大图）常把页眉行与图下方正文吞进裁剪框——用页眉短行收缩顶缘、正文长行收缩底缘
+    {
+      const hdrLines=PG.lines.filter(L=>L.top<H*0.15&&L.text.trim().length<45);
+      const bodyLong=PG.lines.filter(L=>L.text.length>50&&!isChartLine(L)&&L.fs>=(bodyFs||10)*0.85);
+      regions.forEach(R=>{
+        if(R.ptb-R.ptt<H*0.45)return;
+        // 顶缘：盒顶侵入页头带（H*0.09 内）且该带内有页眉短行 → 收缩到页眉行下沿
+        if(R.ptt<H*0.09){
+          const inc=hdrLines.filter(L=>L.top<H*0.13);
+          if(inc.length)R.ptt=Math.max(...inc.map(L=>L.top+L.fs))+3;
+        }
+        const hh=R.ptb-R.ptt;
+        const botHit=bodyLong.filter(L=>L.top+L.fs>R.ptb-hh*0.22&&L.top+L.fs<=R.ptb+2&&L.x0<R.x1&&L.x1>R.x0);
+        if(botHit.length>=1)R.ptb=Math.min(...botHit.map(L=>L.top))-4;
+      });
+    }
+    // 吸收图形区域附近的图表行（"20-layer"/"F(x)+x" 类图内散标签）：扩进包围盒 → 剔除正文且出现在裁剪图中
+    PG.lines.forEach(L=>{
+      if(!isChartLine(L))return;
+      const cx=(L.x0+L.x1)/2,cy=L.top+L.fs/2;
+      const r=regions.find(o=>cx>=o.x0-40&&cx<=o.x1+40&&cy>=o.ptt-60&&cy<=o.ptb+35); // 上方余量大：图内标签常高于图形本体
+      if(r){r.x0=Math.min(r.x0,L.x0);r.x1=Math.max(r.x1,L.x1);r.ptt=Math.min(r.ptt,L.top);r.ptb=Math.max(r.ptb,L.top+L.fs)}
+    });
+    // ---- Algorithm 伪代码块（必须在 inBox 剔除之前跑——伪代码的规则边框会被矢量检测聚成巨盒把整块文本吞掉）：
+    // 锚行 "Algorithm N" 起，行号前缀行（"1:" "2:"…）为块内铁证，整块渲染成一张图（伪代码行是文本+数学交替，公式检测会切碎它）；
+    // 锚行独立成 caption 可翻译；与 alg 盒重叠的矢量框丢弃（alg 盒自己裁完整图，含边框渲染）。
+    // 伪代码的下标簇有 14pt 级间隙会打断物理行聚合（"Input: T" | ", E" | "." 三条碎行）——先做视觉行合并（同栏同 y）----
+    const algBoxes=[];const algAnchors=[];
+    {
+      const byCol={};
+      PG.lines.forEach(l=>{const c=isTwo?colOf(l,mid):'C';(byCol[c]=byCol[c]||[]).push(l)});
+      Object.entries(byCol).forEach(([col,arr])=>{
+        if(!arr.length)return;
+        arr.sort((a,b)=>a.top-b.top);
+        const vr=[];
+        for(const l of arr){
+          const g=vr[vr.length-1];
+          if(g&&l.top<g.bottom-1.5){
+            g.lines.push(l);g.bottom=Math.max(g.bottom,l.top+l.fs);
+            g.x0=Math.min(g.x0,l.x0);g.x1=Math.max(g.x1,l.x1);
+            g.text=(g.text?g.text+' ':'')+l.text;
+            let ch=0,mc=0;g.lines.forEach(x=>{const n=x.text.trim().length;ch+=n;mc+=Math.round((x.mathFrac||0)*n)});
+            g.mathFrac=ch?mc/ch:0;
+          }else vr.push({lines:[l],top:l.top,bottom:l.top+l.fs,x0:l.x0,x1:l.x1,text:l.text,mathFrac:l.mathFrac||0});
+        }
+        const ai=vr.findIndex(g=>/^Algorithm\s+\d+\s*[:.\-]?\s*[A-Za-z]/i.test(g.text.trim()));
+        if(ai<0)return;
+        const A=vr[ai];
+        const keep=[A];
+        const isNumLine=g=>/^\s*\d{1,2}:/.test(g.text);
+        const kwRe=/^(if|for|while|return|end|do|then|else|input|output|initialize|update|set|break|require|ensure|procedure|function|\/{2,})\b/i;
+        const isAlgRow=g=>g.lines.some(l=>l.items.some(it=>it.fs<=8.5&&/^\d{1,2}:?$/.test(it.str.trim())))
+          ||isNumLine(g)||kwRe.test(g.text.trim())||g.mathFrac>0.45;
+        for(let vi=ai+1;vi<vr.length;vi++){
+          const g=vr[vi];
+          const prev=keep[keep.length-1];
+          const gap=g.top-(prev.top+(prev.bottom-prev.top));
+          if(gap>(bodyFs||10)*2.7)break; // 大间隙 = 块结束
+          if(isAlgRow(g)){keep.push(g);continue}
+          // 无行号/关键词/数学的行：若是"下一行仍是伪代码行"的续行（长代码换行）则吸收，否则 = 正文，终止
+          const nxt=vr[vi+1];
+          const cont=nxt&&nxt.top-(g.top+(g.bottom-g.top))<=(bodyFs||10)*1.4&&isAlgRow(nxt);
+          if(cont){keep.push(g);continue}
+          break;
+        }
+        if(keep.length>=5){
+          const lines=keep.flatMap(g=>g.lines);
+          // 通道1补充判据：行号 item 与内容常因字号差异聚合失败（text 无 "N:" 前缀）——按 items 坐标+字号判定
+          const numItems=lines.flatMap(l=>l.items).filter(it=>it.fs<=8.5&&/^\d{1,2}:?$/.test(it.str.trim())).length;
+          if(numItems>=3){
+            algAnchors.push({text:A.text.trim().replace(/^Algorithm\s+(\d+)\s*[:.\-]?\s*/i,'Algorithm $1: '),page:PG.no,top0:A.top});
+            algBoxes.push({x0:Math.min(...keep.map(g=>g.x0)),x1:Math.max(...keep.map(g=>g.x1)),
+              ptt:keep[0].top,ptb:Math.max(...keep.map(g=>g.bottom)),lines,col});
+          }
+        }
+      });
+    }
+    const algLineSet=new Set();
+    algBoxes.forEach(b=>b.lines.forEach(l=>algLineSet.add(l)));
+    // 与 alg 盒重叠的矢量框丢弃（伪代码边框、跨栏聚簇误检——alg 盒自己会裁完整图；重叠 = y 交 ≥40 且 x 交 ≥50）
+    if(algBoxes.length){
+      regions=regions.filter(r=>!algBoxes.some(b=>{
+        const yOv=Math.min(r.ptb,b.ptb)-Math.max(r.ptt,b.ptt);
+        const xOv=Math.min(r.x1,b.x1)-Math.max(r.x0,b.x0);
+        return yOv>=40&&xOv>=50;
+      }));
+    }
+    // 图注续行标记：图注锚行下方同栏 ≤58pt 的小写词开头续句行（排除 "(a)" 类子图标签）——
+    // 打上 _capCont 后 ①colPg 把它归回所在栏（不被"顶部带→C 组"抢走拆散图注）
+    // ②mergeLines 的续句判据把它并回图注 ③若真被图盒吞掉，rawLines 剔除时豁免
+    const capCont=new Set();
+    {
+      const capRe=/^(?:[Ff]ig(?:ure)?|[Tt]able)\s*\.?\s*\d+(?:\s+[A-Z0-9(]|\s*[.:]|\([a-z0-9]\))/;
+      PG.lines.forEach(A=>{
+        if(!capRe.test(A.text))return;
+        PG.lines.forEach(L=>{
+          if(L===A)return;
+          if(L.x1<A.x0-15||L.x0>A.x1+15)return;
+          const dy=L.top-A.top;
+          if(dy<=0||dy>58)return;
+          if(!/^[a-z]/.test(L.text.trim())||L.text.trim().length<15)return;
+          L._capCont=true;
+          capCont.add(L);
+        });
+      });
+    }
+    const rawLines=PG.lines.filter(L=>{
+      if(algLineSet.has(L))return false; // Algorithm 块行已整块成图
+      // 图区域内的文字剔除——但标题/图注豁免：图框经散标签吸收后偏大，会把图下方紧邻的章节标题、图注一起吞掉
+      const isCap=/^(?:[Ff]ig(?:ure)?|[Tt]able)\s*\.?\s*\d+(?:\s+[A-Z0-9(]|\s*[.:]|\([a-z0-9]\))/.test(L.text);
+      const isHead=L.fs>=(bodyFs||10)*1.18&&L.text.length<95;
+      if(isCap||isHead||capCont.has(L))return true;
+      return !inBox(regions,(L.x0+L.x1)/2,L.top+L.fs/2);
+    });
+    // 表格网格检测：单栏页全页跑（表格常横跨页面中线，按栏分组会劈碎）；双栏页按栏分组避免左右互串
+    const tableBoxes=[];
+    {
+      const groups=isTwo?{L:[],R:[],C:[]}:{ALL:[]};
+      rawLines.forEach(L=>{(isTwo?groups[colOf(L,mid)]:groups.ALL).push(L)});
+      Object.entries(groups).forEach(([k,ls])=>{
+        detectTableBlocks(ls).forEach(t=>{
+          const cx=(t.x0+t.x1)/2,cy=(t.ptt+t.ptb)/2;
+          if(regions.some(o=>cx>=o.x0-4&&cx<=o.x1+4&&cy>=o.ptt-4&&cy<=o.ptb+4))return; // 已在图形区域内，勿重复
+          tableBoxes.push({col:isTwo?k:'C',box:t});
+        });
+      });
+      if(isTwo){
+        // 跨栏宽表兜底：全页逻辑行检测。宽表特征 ≥30% 行有 ≥3 并排物理列（双栏正文每行只有 L+R 两条不会误判）
+        // 三重防线把正文挡在盒外：①散文行（满栏宽 ≥68% 或 ≥50 字符）②行顶锚定（宽表行必与已检出栏内盒行顶一致 ±1.2pt）
+        // ③协调期横向间隙（保留行与被覆盖盒并集并距 ≤40pt）+ 纵向边界（盒 y 范围不得超出被覆盖盒并集 ±25pt）
+        const leftish=rawLines.filter(l=>l.x1<=mid+8),rightish=rawLines.filter(l=>l.x0>=mid-8);
+        const lX1=leftish.length?Math.max(...leftish.map(l=>l.x1)):mid,lX0=leftish.length?Math.min(...leftish.map(l=>l.x0)):0;
+        const rX0=rightish.length?Math.min(...rightish.map(l=>l.x0)):mid,rX1=rightish.length?Math.max(...rightish.map(l=>l.x1)):W;
+        const lW=lX1-lX0,rW=rX1-rX0;
+        const proseW=l=>l.text.length>=50||(l.x1-l.x0)>=(l.x1<=mid+8?lW:(l.x0>=mid-8?rW:Math.max(lW,rW)))*0.68;
+        const anchors=tableBoxes.flatMap(tb=>tb.box.lines.map(l=>l.top));
+        detectTableBlocks(rawLines,true).forEach(t=>{
+          const cx=(t.x0+t.x1)/2,cy=(t.ptt+t.ptb)/2;
+          if(regions.some(o=>cx>=o.x0-4&&cx<=o.x1+4&&cy>=o.ptt-4&&cy<=o.ptb+4))return;
+          const keep=t.lines.filter(l=>!proseW(l)&&anchors.some(a=>Math.abs(a-l.top)<=1.2));
+          if(keep.length<8)return;
+          const bR={x0:Math.min(...keep.map(l=>l.x0)),x1:Math.max(...keep.map(l=>l.x1)),
+            ptt:Math.min(...keep.map(l=>l.top)),ptb:Math.max(...keep.map(l=>l.top+l.fs))};
+          const hits=tableBoxes.filter(tb=>!(bR.ptt>tb.box.ptb-4||tb.box.ptt>bR.ptb-4)&&!(bR.x0>tb.box.x1-4||tb.box.x0>bR.x1-4));
+          const covered=hits.filter(tb=>tb.box.x0>=bR.x0-8&&tb.box.x1<=bR.x1+8&&tb.box.ptt>=bR.ptt-8&&tb.box.ptb<=bR.ptb+8);
+          if(!covered.length)return;
+          // 候选块里的散文行必须落在被覆盖盒 y 范围内——两表之间的正文桥接行说明块把两张独立的表粘在一起了
+          const inCoveredY=l=>covered.some(tb=>l.top>=tb.box.ptt-8&&l.top<=tb.box.ptb+8);
+          if(t.lines.some(l=>proseW(l)&&!inCoveredY(l)))return;
+          const u=covered.reduce((s,tb)=>({x0:Math.min(s.x0,tb.box.x0),x1:Math.max(s.x1,tb.box.x1),ptt:Math.min(s.ptt,tb.box.ptt),ptb:Math.max(s.ptb,tb.box.ptb)}),{x0:1e9,x1:-1e9,ptt:1e9,ptb:-1e9});
+          // 盒外行（离被覆盖盒横向 >40pt）：按 x0 对齐聚列——列内 ≥4 行是真表格列（左列标签），孤行是栏首粗体词/段落尾行 → 剔除
+          const outside=keep.filter(l=>l.x1<u.x0-40||l.x0>u.x1+40);
+          const inRange=keep.filter(l=>!outside.includes(l));
+          const cols=[];outside.forEach(l=>{const c=cols.find(c=>Math.abs(c.x0-l.x0)<=15);if(c)c.lines.push(l);else cols.push({x0:l.x0,lines:[l]})});
+          const colKeep=[];cols.forEach(c=>{if(c.lines.length>=4)colKeep.push(...c.lines)});
+          const keep2=[...inRange,...colKeep];
+          if(keep2.length<8)return;
+          const b={x0:Math.min(...keep2.map(l=>l.x0)),x1:Math.max(...keep2.map(l=>l.x1)),
+            ptt:Math.min(...keep2.map(l=>l.top)),ptb:Math.max(...keep2.map(l=>l.top+l.fs)),lines:keep2};
+          const wideOK=(b.x1-b.x0)>=(u.x1-u.x0)+80||covered.length>=2;
+          const yOK=b.ptt>=u.ptt-8&&b.ptb<=u.ptb+25;
+          if(wideOK&&yOK){
+            covered.forEach(tb=>{const ix=tableBoxes.indexOf(tb);if(ix>=0)tableBoxes.splice(ix,1)});
+            tableBoxes.push({col:'C',box:b});
+          }
+        });
+      }
+    }
+    const tableLineSet=new Set();
+    tableBoxes.forEach(t=>t.box.lines.forEach(l=>tableLineSet.add(l)));
+    const rest=rawLines.filter(l=>!tableLineSet.has(l));
+    // ---- 公式块检测（视觉行级·按栏分组）----
+    // 同栏同 y 的多条物理行合成视觉行——参数行 "with weights λhm = 1.0" 是文本+数学字体交替，物理行级拆开会误判；
+    // 双栏页左右栏同 y 行绝不合并（左栏标题 "Proposed Method" 与右栏公式同 y 会互相稀释/误吞）；
+    // 视觉行数学字符占比 >0.45 且含字母类数学符号（g/λ/L…）= 公式行（纯数字元组 "(6,68,128)" 无字母不算）；
+    // 相邻公式行连块 → 裁剪成图。与正文行 y 交错的边缘残片（Ŷ 的帽子 ˆ 属于下方正文行）在同一视觉行里被正文稀释，天然不会进块
+    const sortedRest=[...rest].sort((a,b)=>a.top-b.top);
+    const vrows=[];
+    {
+      const byCol={L:[],R:[],C:[]};
+      sortedRest.forEach(L=>{const c=isTwo?colOf(L,mid):'C';byCol[c].push(L)});
+      Object.entries(byCol).forEach(([col,arr])=>{
+        if(!arr.length)return;
+        let g=null;
+        for(const L of arr){
+          if(g&&L.top<g.bottom-1.5){g.lines.push(L);g.bottom=Math.max(g.bottom,L.top+L.fs);g.x0=Math.min(g.x0,L.x0);g.x1=Math.max(g.x1,L.x1)}
+          else{g={lines:[L],top:L.top,bottom:L.top+L.fs,x0:L.x0,x1:L.x1,col};vrows.push(g)}
+        }
+      });
+    }
+    vrows.forEach(g=>{
+      let ch=0,mc=0,word=false;
+      g.lines.forEach(l=>{
+        const n=(l.text||'').trim().length;ch+=n;mc+=Math.round((l.mathFrac||0)*n);
+        if(l.mathFrac>0.5&&/[A-Za-zλσ⊙π∑√≈≤≥]/.test((l.text||'').replace(/[\d\s.,:;()=+\-×]/g,'')))word=true;
+      });
+      g.mathFrac=ch?mc/ch:0;g.hasMathWord=word;
+    });
+    const eqRowLines=new Set();const eqBlocks=[];let eqBlock=null;
+    const flushEq=()=>{if(eqBlock)eqBlocks.push(eqBlock);eqBlock=null};
+    for(const g of vrows){
+      if(g.mathFrac>0.45&&g.hasMathWord){
+        if(eqBlock&&(eqBlock.col!==g.col||g.top-eqBlock.bottom>(bodyFs||10)*2.6))flushEq();
+        if(!eqBlock)eqBlock={top:g.top,bottom:g.bottom,x0:g.x0,x1:g.x1,chars:0,col:g.col};
+        eqBlock.bottom=Math.max(eqBlock.bottom,g.bottom);
+        eqBlock.x0=Math.min(eqBlock.x0,g.x0);eqBlock.x1=Math.max(eqBlock.x1,g.x1);
+        eqBlock.chars+=g.lines.reduce((s,l)=>s+l.text.replace(/\s+/g,'').length,0);
+        g.lines.forEach(l=>eqRowLines.add(l));
+      }else if(eqBlock&&eqBlock.col===g.col&&g.lines.every(l=>isChartLine(l))&&g.top-eqBlock.bottom<=(bodyFs||10)*1.2){ // 紧随的编号行"(2)"
+        eqBlock.bottom=Math.max(eqBlock.bottom,g.bottom);
+        eqBlock.x0=Math.min(eqBlock.x0,g.x0);eqBlock.x1=Math.max(eqBlock.x1,g.x1);
+        eqBlock.chars+=g.lines.reduce((s,l)=>s+l.text.replace(/\s+/g,'').length,0);
+        g.lines.forEach(l=>eqRowLines.add(l));
+      }else flushEq();
+    }
+    flushEq();
+    const rest2=rest.filter(l=>!eqRowLines.has(l));
+    // 数字条带提取（表格之外的散落数据行；公式行已剔除）
+    // 参考文献碎片改道正文：引用尾 "62–64] have adopted"、arXiv 引用 "abs/2203.14360, 2022. 2, 6"、
+    // 期刊卷期 "vol. 115, no. 1, pp. 60–68, 2015." 数字占比高会被判成数据行——它们是参考文献句子，应回正文流
+    const isRefLine=L=>/\]\s*[a-z]/.test(L.text)||/abs\/\d{4}\.\d{4,5}/.test(L.text)||/\b(?:vol|no|pp)\.\s*\d/.test(L.text)||/\d+\s*[–—-]\s*\d+,\s*\(\d{4}\)/.test(L.text);
+    const chartRuns=[];const textLines=[];let run=null;
+    const flushRun=()=>{if(run&&run.lines.length)chartRuns.push(run);run=null};
+    for(const L of rest2){
+      if(isChartLine(L)&&!isRefLine(L)){
+        if(run&&L.top-(run.top+run.fs)>Math.max(20,run.fs*3))flushRun();
+        if(!run)run={col:colOf(L,mid),top:L.top,bottom:L.top+L.fs,x0:L.x0,x1:L.x1,fs:L.fs,texts:[],lines:[]};
+        run.top=Math.min(run.top,L.top);run.bottom=Math.max(run.bottom,L.top+L.fs);
+        run.x0=Math.min(run.x0,L.x0);run.x1=Math.max(run.x1,L.x1);
+        run.fs=Math.max(run.fs,L.fs);run.texts.push(L.text);run.lines.push(L);
+      }else{flushRun();textLines.push(L)}
+    }
+    flushRun();
+    // 公式盒：残片（总字符 <10 的 "ˆ"/"c" 上下标碎串）丢弃；与正文行窗口冲突时收缩边界；相邻盒合并（式+参数/多行式组）
+    let eqBoxes=eqBlocks.filter(b=>b.chars>=10)
+      .map(b=>({x0:b.x0-14,x1:b.x1+14,ptt:b.top-6,ptb:b.bottom+8,top:b.top,run:{col:b.col}}));
+    eqBoxes.forEach(b=>{
+      textLines.forEach(L=>{
+        if(L.x1<b.x0-10||L.x0>b.x1+10)return; // 横向不重叠
+        if(L.top+L.fs>b.ptt-2&&L.top+L.fs<=b.ptt+10)b.ptt=Math.max(b.ptt,L.top+L.fs+2); // 顶缘侵入的正文行
+        if(L.top>=b.ptb-10&&L.top<b.ptb+2)b.ptb=Math.min(b.ptb,L.top-2);                 // 底缘侵入的正文行
+      });
+    });
+    eqBoxes=eqBoxes.filter(b=>b.ptb-b.ptt>10);
+    {
+      const merged=[];
+      eqBoxes.forEach(b=>{
+        const m=merged.find(m=>m.run.col===b.run.col&&b.ptt-m.ptb<=10&&b.ptt>=m.ptt-10&&!(b.x0>m.x1+20||m.x0>b.x1+20));
+        if(m){m.x0=Math.min(m.x0,b.x0);m.x1=Math.max(m.x1,b.x1);m.ptt=Math.min(m.ptt,b.ptt);m.ptb=Math.max(m.ptb,b.ptb)}
+        else merged.push(b);
+      });
+      eqBoxes=merged;
+    }
+    // 与 alg 盒重叠的公式盒丢弃（伪代码内部的数学行已被 alg 整块覆盖）
+    if(algBoxes.length)eqBoxes=eqBoxes.filter(b=>!algBoxes.some(a=>{
+      const yOv=Math.min(b.ptb,a.ptb)-Math.max(b.ptt,a.ptt);
+      const xOv=Math.min(b.x1,a.x1)-Math.max(b.x0,a.x0);
+      return yOv>=10&&xOv>=10;
+    }));
+    const vecRuns=chartRuns.filter(r=>r.lines.length>=3&&(r.bottom-r.top)>50); // 成块表格/密集图（无墨量的纯文字表格）
+    // 小字号散串（作者上标 1* 2 2…、脚注编号）不是图表行——按平均字号丢弃；纯符号短串（无完整单词）同样丢弃
+    const strayRuns=chartRuns.filter(r=>!vecRuns.includes(r))
+      .filter(r=>{const avgFs=r.lines.reduce((s,l)=>s+l.fs,0)/r.lines.length;return avgFs>=(bodyFs||10)*0.62})
+      .filter(r=>{const t=r.texts.join(' ').trim();const words=(t.match(/[A-Za-z]{3,}/g)||[]).length;return t.length>=15&&!(words===0&&t.length<30)}); // 丢弃"1"、"F(x)+x"类图内散标签
+    const vecBoxes=vecRuns.map(r=>({x0:r.x0-25,x1:r.x1+25,ptt:r.top-14,ptb:r.bottom+22,top:r.top,run:r}));
+    // 整页渲染一次，裁剪所有图框（位图插图 + 矢量图区域 + 公式块 + 网格表格 + 数字密集条带）
+    const cropList=[
+      ...regions,
+      ...algBoxes.map(b=>({x0:b.x0-6,x1:b.x1+6,ptt:b.ptt-3,ptb:b.ptb+6,pad:4})), // Algorithm 伪代码块整图（含行号列与规则边框）
+      ...eqBoxes.map(v=>({x0:v.x0,x1:v.x1,ptt:v.ptt,ptb:v.ptb,pad:2,min:40})), // 公式盒已按正文行收缩到位，只留 2pt 防切边；单行公式高度小，min 放宽
+      ...vecBoxes.map(v=>({x0:v.x0,x1:v.x1,ptt:v.ptt,ptb:v.ptb})),
+      ...tableBoxes.map(t=>{ // 表格盒边界精确：只留 3pt 兜表格线；紧贴盒缘的表注（宽表注在表下、LNCS 表注在表上）修剪掉不裁进图
+        let ptt=t.box.ptt-2,ptb=t.box.ptb+4;
+        PG.lines.forEach(L=>{
+          if(!/^(Fig|Figure|Table)\s*\.?\s*\d/i.test(L.text))return;
+          if(L.x1<t.box.x0-30||L.x0>t.box.x1+30)return;
+          if(L.top+L.fs>ptt-4&&L.top+L.fs<=ptt+16)ptt=Math.max(ptt,L.top+L.fs+3);
+          if(L.top>=ptb-4&&L.top<=ptb+16)ptb=Math.min(ptb,L.top-4);
+        });
+        return {x0:t.box.x0-4,x1:t.box.x1+4,ptt,ptb,pad:3};
+      })
+    ];
+    const cropSrcs=await cropRegions(PG.page,cropList);
+    const NV=regions.length,NA=algBoxes.length,NE=eqBoxes.length,ND=vecBoxes.length;
+    const figs=[
+      ...regions.map((b,i)=>({col:colOf(b,mid),top:b.ptt,src:cropSrcs[i]&&cropSrcs[i].src})),
+      ...algBoxes.map((b,i)=>({col:b.col,top:b.ptt,src:cropSrcs[NV+i]&&cropSrcs[NV+i].src})),
+      ...eqBoxes.map((v,i)=>({col:v.run.col,top:v.top,src:cropSrcs[NV+NA+i]&&cropSrcs[NV+NA+i].src})),
+      ...vecBoxes.map((v,i)=>({col:v.run.col,top:v.top,src:cropSrcs[NV+NA+NE+i]&&cropSrcs[NV+NA+NE+i].src})),
+      ...tableBoxes.map((t,i)=>({col:t.col,top:t.box.ptt,src:cropSrcs[NV+NA+NE+ND+i]&&cropSrcs[NV+NA+NE+ND+i].src}))
+    ].filter(f=>f.src); // 渲染失败/裁剪过小的图直接舍弃，绝不输出空框
+    const dataBlocks=strayRuns.map(r=>({type:'data',page:PG.no,text:r.texts.join(' '),top:r.top})).filter(r=>r.text.trim().length>=15); // 丢弃"1"、"20-layer"类图内散标签
+    // 按列组装流：文字段+插图+数据块在同一列内按纵向位置混合排序
+    const mkStream=(ls,fs_,ds)=>{
+      const its=[
+        ...mergeLines(ls,bodyFs).map(x=>({k:'t',top:x.top0,v:x})),
+        ...fs_.map(f=>({k:'f',top:f.top,v:f})),
+        ...ds.map(r=>({k:'d',top:r.top,v:r}))
+      ].sort((a,b)=>a.top-b.top);
+      return its.map(it=>it.k==='t'?it.v:(it.k==='f'?{type:'fig',page:PG.no,src:it.v.src,top:it.v.top}:{type:'data',page:PG.no,text:it.v.text}));
+    };
+    let stream;
+    if(isTwo){
+      const colPg=(o)=>{ // 页顶 22% 视为整栏区（标题/作者），避免作者名被拆进左右栏
+        // 图注锚行与其续行（_capCont）必须归所在栏（colOf），不得被"顶部带→C 组"规则抢走——
+        // 否则同一图注的锚与续行被拆进不同 mergeLines 调用（mprior Fig.1 三行注被拆三段），续行永远无法并回
+        if(o._capCont===true||/^(?:[Ff]ig(?:ure)?|[Tt]able)\s*\.?\s*\d/.test(o.text||''))return colOf(o,mid);
+        if(o.top!=null&&o.top<H*0.22&&o.x0>W*0.18)return 'C';
+        return colOf(o,mid);
+      };
+      const Ls=textLines.filter(l=>colPg(l)==='L'),
+            Rs=textLines.filter(l=>colPg(l)==='R'),
+            Cs=textLines.filter(l=>colPg(l)==='C');
+      // 整栏/分栏边界取自左右栏正文实际范围（自适应，替代固定 45%）
+      const lr=[...Ls,...Rs];
+      const minTopLR=lr.length?Math.min(...lr.map(l=>l.top)):H*0.45;
+      const maxBotLR=lr.length?Math.max(...lr.map(l=>l.top+l.fs)):H*0.45;
+      const fL=figs.filter(f=>f.col==='L'),fR=figs.filter(f=>f.col==='R'),
+            fS=figs.filter(f=>f.col==='C'); // 跨栏图
+      // 零散数据行按所属列归类
+      const strayByCol=(r)=>r.col||'C';
+      const sL=strayRuns.filter(r=>strayByCol(r)==='L').map(r=>({type:'data',page:PG.no,text:r.texts.join(' '),top:r.top}));
+      const sR=strayRuns.filter(r=>strayByCol(r)==='R').map(r=>({type:'data',page:PG.no,text:r.texts.join(' '),top:r.top}));
+      const sC=strayRuns.filter(r=>strayByCol(r)==='C').map(r=>({type:'data',page:PG.no,text:r.texts.join(' '),top:r.top}));
+      const Ctop=mergeLines(Cs.filter(l=>l.top<minTopLR-4),bodyFs);
+      const isBottom=(l)=>l.top+l.fs>maxBotLR+4||l.top>H*0.82; // 页底带（全宽脚注/版权行）强制归底
+      const Cbot=mergeLines(Cs.filter(isBottom),bodyFs);
+      const Cmid=mergeLines(Cs.filter(l=>!isBottom(l)&&!(l.top<minTopLR-4)),bodyFs); // 栏间整栏元素（长公式等）
+      const fTop=fS.filter(f=>f.top<minTopLR),fBot=fS.filter(f=>f.top>maxBotLR-40),
+            fMid=fS.filter(f=>!(f.top<minTopLR)&&!(f.top>maxBotLR-40));
+      stream=[
+        ...Ctop,
+        ...fTop.map(f=>({type:'fig',page:PG.no,src:f.src,top:f.top})),
+        ...mkStream(Ls,fL,sL),
+        ...fMid.map(f=>({type:'fig',page:PG.no,src:f.src,top:f.top})),
+        ...Cmid,
+        ...mkStream(Rs,fR,sR),
+        ...fBot.map(f=>({type:'fig',page:PG.no,src:f.src,top:f.top})),
+        ...Cbot,
+        ...sC.map(r=>({type:'data',page:PG.no,text:r.text}))
+      ];
+    }else{
+      stream=mkStream(textLines,figs,dataBlocks);
+    }
+    paras.push(...stream,...algAnchors.map(a=>({type:'caption',page:a.page,text:a.text,top0:a.top0})));
+  }
+  const cleaned=paras.map(x=>{
+    if(x.type==='fig')return{type:'fig',page:x.page,src:x.src,text:null,top:x.top,zh:null};
+    if(x.type==='data')return{type:'data',page:x.page,text:x.text,zh:null};
+    return{type:x.type,page:x.page,text:x.text,top0:x.top0,zh:null};
+  }).filter(p=>p.type==='fig'||p.type==='data'||p.type==='head'||p.type==='caption'||p.text.length>25||/[.。:：]$/.test(p.text));
+  // ---- 段落缝合：被 页断/栏断/图断 打碎的正文段按续写特征合回一段 ----
+  {
+    const TERM=/[.。!！?？:：;；"”'’)\]]$/;
+    const out=[];
+    for(const p of cleaned){
+      const prev=out[out.length-1];
+      if(prev&&prev.type==='body'&&p.type==='body'){
+        const a=prev.text.trim(),b=p.text.trim();
+        if(!TERM.test(a)||(a.length<200&&/^[a-z0-9(]/.test(b)&&/\.$/.test(a))){
+          // 前段无终止标点 = 被打断；或 前段短且以句号收尾+后段小写开头 = 跨页/跨栏续写
+          prev.text=a+' '+b;
+          continue;
+        }
+      }
+      out.push(p);
+    }
+    // ---- 图注吸附：caption 离同页最近的 fig 超过 1 段时贴过去；按物理位置决定贴图前（表注在表上/LNCS 图注在图上）还是图后（图注在图下/AAAI 表注在表下），与原文版式一致 ----
+    // 每个 caption 至多移动一次——两个 caption 共享最近 fig 时会交替争抢形成死循环
+    const done=new Set();
+    for(let i=0;i<out.length;i++){
+      const c=out[i];
+      if(c.type!=='caption'||done.has(c))continue;
+      let best=-1,bd=1e9;
+      for(let j=0;j<out.length;j++){
+        if(out[j].type!=='fig'||out[j].page!==c.page)continue;
+        const d=Math.abs(j-i);
+        if(d<bd){bd=d;best=j}
+      }
+      if(best<0)continue;
+      const before=c.top0!=null&&out[best].top!=null&&c.top0<=out[best].top; // 注在图形区域上方 → 贴图前
+      if((before&&best===i+1)||(!before&&best===i-1))continue; // 已紧贴在正确一侧
+      done.add(c);
+      out.splice(i,1);
+      const ins=before?(best>i?best-1:best):(best>i?best:best+1);
+      out.splice(ins,0,c);
+      i=Math.min(i,ins)-1;
+    }
+    out.forEach((p,i)=>p.id=i+1);
+    return out;
+  }
+}
+function deriveTitle(paras,fname){
+  const h=paras.find(p=>p.type==='head');
+  if(h&&h.text.length>4)return h.text.slice(0,80);
+  const b=paras.find(p=>p.text&&p.text.length>40);
+  return b?b.text.split(/[.。:：]/)[0].slice(0,70):fname.replace(/\.pdf$/i,'');
+}
+
+/* ================= 渲染：小说式排版 ================= */
+function renderArticle(){
+  const rd=$('#reader');
+  const dz=$('#dropzone');if(dz)dz.remove();
+  rd.innerHTML='';
+  const art=document.createElement('div');art.id='article';
+  const frag=document.createDocumentFragment();
+  S.doc.paras.forEach(p=>{
+    const blk=document.createElement('div');
+    blk.id='para-'+p.id;
+    if(p.type==='fig'){
+      blk.className='pblock fig';
+      blk.innerHTML='<span class="pmeta">图 · p.'+p.page+'</span><div class="figwrap"><img src="'+p.src+'" alt="原文插图，点击放大"></div>';
+      frag.appendChild(blk);return;
+    }
+    if(p.type==='data'){
+      blk.className='pblock data';
+      blk.innerHTML='<span class="pmeta">数据行 · p.'+p.page+'</span><div class="pdata">'+esc(p.text)+'</div>';
+      frag.appendChild(blk);return;
+    }
+    if(p.type==='caption'){
+      blk.className='pblock caption';
+      blk.innerHTML='<span class="pmeta">图注 · p.'+p.page+'</span>'+
+        '<div class="pact"><button data-act="one">译</button><button data-act="re">↻</button></div>'+
+        '<div class="pen" data-pid="'+p.id+'">'+senHtml(p.text)+'</div>'+
+        '<div class="pzh" id="zh-'+p.id+'"></div>';
+      frag.appendChild(blk);return;
+    }
+    blk.className='pblock'+(p.type==='head'?' head':'');
+    blk.innerHTML=
+      '<span class="pmeta">P'+p.id+' · p.'+p.page+'</span>'+
+      '<div class="pact"><button data-act="one">译</button><button data-act="re" title="重译">↻</button></div>'+
+      '<div class="pen" data-pid="'+p.id+'">'+senHtml(p.text)+'</div>'+
+      '<div class="pzh" id="zh-'+p.id+'"></div>';
+    frag.appendChild(blk);
+  });
+  art.appendChild(frag);
+  rd.appendChild(art);
+  rd.scrollTop=0;              // 切换文献回到顶部，避免旧滚动位置污染新文献进度
+  $('#readFill').style.width='0%';
+  clearTimeout(_trkTimer);     // 丢弃上一篇遗留的进度追踪
+  renderTrans();applyAnnos();renderOutline();
+  $('#btnTransAll').disabled=$('#btnAgent').disabled=$('#btnExport').disabled=$('#btnChat').disabled=false;
+  $('#docTitle').textContent='《'+S.doc.title+'》';
+  $('#readBar').classList.add('show');
+}
+function renderTrans(){
+  linkHide();
+  S.doc.paras.forEach(p=>{
+    const el=$('#zh-'+p.id);if(!el)return;
+    if(p.zh&&el.dataset.zh===p.zh)return; // 已渲染且未变化 → 跳过，保留句级切分
+    el.className='pzh';
+    if(p.zh){
+      el.dataset.zh=p.zh;
+      el.classList.add('show');el.innerHTML='';
+      if(p.zhBy==='free'){
+        const b=document.createElement('div');b.className='freenote';
+        b.textContent='⚡ 免费公共翻译（精度较低）· 悬停段落点 ↻ 可用 Agent 重译';
+        el.appendChild(b);
+      }
+      const z=document.createElement('div');z.className='zhmd';el.appendChild(z);setRich(z,p.zh);
+      zhSentenceize(z);
+    }
+    else if(p.loading){el.classList.add('show');el.innerHTML='<div class="empty"><span class="spin"></span> 翻译中…</div>'}
+    else if(p.err){el.classList.add('show','err');el.textContent='⚠ '+p.err}
+  });
+}
+function renderOutline(){
+  const box=$('#tab-outline');
+  const heads=S.doc.paras.filter(p=>p.type==='head');
+  if(!heads.length){box.innerHTML='<div class="side-tip">本文未识别出明显的章节标题。</div>';return}
+  const last=S.doc.progress.lastPid||0;
+  box.innerHTML='';
+  heads.forEach(h=>{
+    const d=document.createElement('div');
+    d.className='outline-item'+(h.id<=last?' read':'');
+    d.innerHTML='<span class="dot"></span>'+esc(h.text);
+    d.title=h.text;
+    d.onclick=()=>{const el=$('#para-'+h.id);el&&el.scrollIntoView({behavior:'smooth',block:'start'})};
+    box.appendChild(d);
+  });
+}
+
+/* ================= 翻译 ================= */
+const SYS_TRANS='你是专业的学术文献翻译。将用户提供的英文（或原文）论文片段翻译成准确、流畅、符合中文学术表达习惯的中文。'+
+ '要求：1) 公式、数学符号转写为 LaTeX，行内用 $...$，独立公式用 $$...$$；2) 专有名词首次出现时在括号中保留英文；'+
+ '3) 只输出译文本身，不要任何解释或原文复读。';
+/* ---- 免费公共翻译兜底：多引擎链（gtx → MyMemory），谁可用走谁；专用 250ms 轻量节流 ---- */
+let _freeLast=0,_freeChain=Promise.resolve();
+function freePace(){
+  const run=_freeChain.then(async()=>{
+    const wait=_freeLast+250-Date.now();
+    if(wait>0)await new Promise(r=>setTimeout(r,wait));
+    _freeLast=Date.now();
+  });
+  _freeChain=run.then(()=>{},()=>{});
+  return run;
+}
+function splitForFree(t){
+  const sents=String(t).match(/[^.!?。]+[.!?。]*\s*/g)||[String(t)];
+  const chunks=[];let cur='';
+  for(const s of sents){
+    if((cur+s).length>450&&cur.trim()){chunks.push(cur.trim());cur=''}
+    cur+=s;
+  }
+  if(cur.trim())chunks.push(cur.trim());
+  return chunks.length?chunks:[String(t).slice(0,450)];
+}
+/* 引擎1：Google gtx（家宽可用，数据中心 IP 可能被拦；CORS 开放） */
+async function gtxTranslate(text){
+  const parts=splitForFree(text);
+  const out=[];
+  for(const c of parts){
+    await freePace();
+    const u='https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&q='+encodeURIComponent(c);
+    const r=await fetch(u);
+    if(!r.ok)throw new Error('gtx 不可用('+r.status+')');
+    const j=await r.json();
+    const t=Array.isArray(j)&&Array.isArray(j[0])?j[0].map(seg=>seg&&seg[0]||'').join(''):'';
+    if(!t.trim())throw new Error('gtx 返回为空');
+    out.push(t);
+  }
+  return out.join('');
+}
+/* 引擎2：MyMemory（IP 级每日配额，耗尽即 429） */
+async function myMemoryTranslate(text){
+  const parts=splitForFree(text);
+  const out=[];
+  for(const c of parts){
+    const delays=[2000,5000,10000];
+    let done=false;
+    for(let a=0;a<=delays.length&&!done;a++){
+      await freePace();
+      try{
+        const u='https://api.mymemory.translated.net/get?q='+encodeURIComponent(c)+'&langpair=en|zh-CN';
+        const r=await fetch(u);
+        if(!r.ok){const err=new Error('MyMemory 不可用('+r.status+')');err.status=r.status;throw err}
+        const j=await r.json();
+        let t=j&&j.responseData&&j.responseData.translatedText;
+        if(!t||/MYMEMORY WARNING|QUERY LENGTH LIMIT|INVALID/i.test(t))throw new Error('MyMemory 今日额度已用尽');
+        out.push(t);done=true;
+      }catch(e){
+        if(a<delays.length&&(e.status===429||/429|额度|limit/i.test(e.message))){await new Promise(rs=>setTimeout(rs,delays[a]));continue}
+        throw e;
+      }
+    }
+  }
+  return out.join('');
+}
+async function freeTranslate(text){
+  const errs=[];
+  for(const [name,fn] of [['Google',gtxTranslate],['MyMemory',myMemoryTranslate]]){
+    try{return await fn(text)}
+    catch(e){errs.push(name+':'+e.message.slice(0,60))}
+  }
+  throw new Error('免费翻译暂不可用（'+errs.join('；')+'）。Google 端点可能被当前网络拦截、MyMemory 为 IP 级每日配额（约24小时后恢复）。建议在「设置」中配置 Agent API 获得稳定翻译');
+}
+async function translatePara(p){
+  if(p.zh&&!p.err)return;
+  p.err=null;p.loading=true;p.zhBy=null;renderTrans();
+  const s=getSettings();
+  try{
+    if(!s.key){
+      p.zh=await freeTranslate(p.text);p.zhBy='free';
+      if(!S._freeHinted){S._freeHinted=true;toast('未配置 API Key，正在使用免费公共翻译（精度较低）',4000)}
+    }else{
+      try{p.zh=await chat([{role:'system',content:SYS_TRANS},{role:'user',content:p.text}]);p.zhBy='agent'}
+      catch(e){
+        // 余额不足/鉴权失败/持续限流 → 自动降级免费引擎
+        if(s.fallback!==false&&/40[123]|429|余额|balance|quota|insufficient|欠费|过期|expired/i.test(e.message)){
+          p.zh=await freeTranslate(p.text);p.zhBy='free';
+          if(!S._freeHinted){S._freeHinted=true;toast('Agent 翻译失败（可能无余额），已自动降级为免费公共翻译，精度较低',5000)}
+        }else throw e;
+      }
+    }
+    saveDoc();
+  }catch(e){p.err=e.message}
+  p.loading=false;renderTrans();
+}
+async function translateAll(){
+  if(S.busy||!S.doc)return;
+  const todo=S.doc.paras.filter(p=>p.text&&!p.loading&&(!p.zh||p.err)); // 含失败段落，可重试
+  if(!todo.length){toast('全部段落已有译文 ✓');return}
+  S.busy=true;const s=getSettings();
+  showProgress('逐段翻译中 0/'+todo.length,0);
+  let done=0;
+  await runQueue(todo,async p=>{
+    await translatePara(p);
+    done++;showProgress('逐段翻译中 '+done+'/'+todo.length,done/todo.length);
+  },s.conc);
+  hideProgress();S.busy=false;
+  const failed=todo.filter(p=>p.err).length;
+  if(failed)toast(failed+' 段翻译失败，可再次点击「翻译全文」或悬停段落点 ↻ 重试',6000);
+  else toast('翻译完成 ✓');
+}
+
+/* ================= 阅读进度 ================= */
+let _trkTimer=null,_trkDocId=null;
+function trackProgress(){
+  if(!S.doc||!$('#article'))return;
+  const rd=$('#reader');
+  if(_trkDocId!==S.doc.id)return; // 定时器到期时已切换文献 → 丢弃
+  const top=rd.getBoundingClientRect().top;
+  let last=0;
+  S.doc.paras.forEach(p=>{
+    const el=$('#para-'+p.id);
+    if(el&&el.getBoundingClientRect().top<top+120)last=Math.max(last,p.id);
+  });
+  if(last>0){
+    S.doc.progress={lastPid:last,pct:Math.round(last/S.doc.paras.length*100),ts:Date.now()};
+    $('#readFill').style.width=(rd.scrollTop/Math.max(1,rd.scrollHeight-rd.clientHeight)*100)+'%';
+    saveDoc();
+  }
+}
+function showResume(){
+  const last=S.doc.progress&&S.doc.progress.lastPid||0;
+  if(last>3){
+    $('#resumePid').textContent=last;
+    $('#resume').classList.add('show');
+  }
+}
+function renderLib(){
+  const box=$('#tab-lib');
+  box.innerHTML='';
+  dbAll().then(docs=>{
+    S._libDocs=docs;
+    docs.sort((a,b)=>(b.lastReadAt||0)-(a.lastReadAt||0));
+    if(!docs.length){box.innerHTML='<div class="side-tip">文献库为空。拖入 PDF 后，论文会自动保存到这里——下次打开无需再找原文件，阅读进度、译文、标注、问答记录都会恢复。</div>';return}
+    if(S._libFolder===undefined)S._libFolder='*';
+    // ---- 文件夹横条：chip 式过滤栏 ----
+    const folders=[...new Set(docs.map(d=>d.folder).filter(Boolean))];
+    const cnt=f=>f==='*'?docs.length:(f===null?docs.filter(d=>!d.folder).length:docs.filter(d=>d.folder===f).length);
+    const bar=document.createElement('div');bar.className='fbar';
+    const mkChip=(label,val)=>{
+      const c=document.createElement('button');
+      c.className='fchip'+(S._libFolder===val?' on':'');
+      c.innerHTML=label+'<span class="n">'+cnt(val)+'</span>';
+      c.onclick=()=>{S._libFolder=val;renderLib()};
+      bar.appendChild(c);
+    };
+    mkChip('📚 全部','*');
+    folders.forEach(f=>mkChip('📁 '+esc(f),f));
+    if(cnt(null))mkChip('未分类',null);
+    box.appendChild(bar);
+    const show=docs.filter(d=>S._libFolder==='*'||(S._libFolder===null?!d.folder:d.folder===S._libFolder));
+    show.forEach(d=>{
+      const pct=(d.progress&&d.progress.pct)||0;
+      const el=document.createElement('div');
+      el.className='lib-item'+(S.doc&&S.doc.id===d.id?' cur':'');
+      el.innerHTML='<div class="lt">'+esc(d.title)+'</div>'+
+        '<div class="lm">'+d.paras.length+' 段 · 已读 '+pct+'%'+(d.lastReadAt?' · '+fmtTime(d.lastReadAt):'')+'</div>'+
+        '<div class="lbar"><div class="lfill" style="width:'+pct+'%"></div></div>'+
+        '<button class="lfd" title="移动到文件夹">📁</button>'+
+        '<button class="ldel" title="从库中删除">✕</button>';
+      el.querySelector('.lfd').onclick=e=>{e.stopPropagation();openFolderModal(d.id)};
+      el.querySelector('.ldel').onclick=async e=>{
+        e.stopPropagation();
+        if(!confirm('删除《'+d.title+'》及其全部进度/标注/问答？此操作不可恢复。'))return;
+        await dbDel(d.id);
+        if(S.doc&&S.doc.id===d.id){S.doc=null;location.reload()}
+        else renderLib();
+      };
+      el.onclick=()=>openDoc(d.id);
+      box.appendChild(el);
+    });
+    const act=document.createElement('div');
+    act.className='lib-actions';
+    act.innerHTML='<button class="btn" id="btnBkExp">⬇ 备份全部</button><button class="btn" id="btnBkImp">⬆ 导入备份</button>';
+    box.appendChild(act);
+    act.querySelector('#btnBkExp').onclick=async()=>{
+      const all=await dbAll();
+      download('精读备份-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({app:'ptx',v:2,docs:all},null,1),'application/json');
+      toast('已导出 '+all.length+' 篇文献的备份');
+    };
+    act.querySelector('#btnBkImp').onclick=()=>$('#bkInput').click();
+  }).catch(()=>{box.innerHTML='<div class="side-tip">浏览器可能处于隐私模式，无法使用本地文献库。</div>'});
+}
+/* ---- 文件夹整理（居中弹窗，与设置弹窗同一路径） ---- */
+let _fmDocId=null;
+async function moveToFolder(docId,f){
+  const d=await dbGet(docId);if(!d)return;
+  d.folder=f||null;
+  await dbPut(d);
+  if(S.doc&&S.doc.id===docId)S.doc.folder=d.folder;
+  renderLib();
+  toast(f?('已移动到「'+f+'」'):'已移出到未分类');
+}
+function openFolderModal(docId){
+  _fmDocId=docId;
+  const docs=S._libDocs||[];
+  const d=docs.find(x=>x.id===docId)||S.doc;
+  const cur=d?d.folder:null;
+  const names=[...new Set(docs.map(x=>x.folder).filter(Boolean))];
+  const counts=new Map();
+  docs.forEach(x=>{if(x.folder)counts.set(x.folder,(counts.get(x.folder)||0)+1)});
+  const list=$('#folderList');list.innerHTML='';
+  const mkRow=(label,f)=>{
+    const isCur=(f||null)===(cur||null);
+    const r=document.createElement('div');
+    r.className='fopt'+(isCur?' cur':'');
+    r.innerHTML='<span>'+esc(label)+'</span>'+
+      (counts.get(f)!=null?'<span class="cnt">'+counts.get(f)+' 篇</span>':'')+
+      (isCur?'<span class="cnt">✓ 当前位置</span>':'');
+    r.onclick=async()=>{await moveToFolder(docId,f);closeMask('folderMask')};
+    list.appendChild(r);
+  };
+  names.forEach(n=>mkRow('📁 '+n,n));
+  mkRow('↩ 未分类',null);
+  if(!names.length&&!cur){
+    const tip=document.createElement('div');tip.className='hint';tip.style.marginBottom='8px';
+    tip.textContent='还没有文件夹——在下方输入名称即可创建第一个，文献会立刻归入其中。';
+    list.appendChild(tip);
+  }
+  $('#newFolderName').value='';
+  openMask('folderMask');
+  setTimeout(()=>$('#newFolderName').focus(),100);
+}
+
+/* ================= 高亮标注 ================= */
+const ANN_COLORS={y:'#fef08a',g:'#bbf7d0',p:'#fbcfe8',b:'#bfdbfe'};
+function wrapRange(range,color,paraId,extraCls){
+  const root=range.commonAncestorContainer;
+  const walker=document.createTreeWalker(root.nodeType===3?root.parentNode:root,NodeFilter.SHOW_TEXT);
+  const nodes=[];let n;
+  while(n=walker.nextNode())nodes.push(n);
+  let wrapped=false;
+  nodes.forEach(node=>{
+    if(!range.intersectsNode(node))return;
+    if(node.parentElement.closest('mark'))return;
+    const sN=node===range.startContainer?range.startOffset:0;
+    const eN=node===range.endContainer?range.endOffset:node.length;
+    if(sN>=eN)return;
+    node.splitText(eN);node.splitText(sN);
+    const mid=node.nextSibling;
+    if(!mid||mid.nodeType!==3)return;
+    const mark=document.createElement('mark');
+    mark.className='hl hl-'+color+(extraCls?' '+extraCls:'');mark.dataset.pid=paraId;
+    mid.parentNode.insertBefore(mark,mid);
+    mark.appendChild(mid);
+    wrapped=true;
+  });
+  return wrapped;
+}
+function addAnno(range,color,paraId){
+  const text=range.toString().trim();
+  if(!text)return;
+  if(!wrapRange(range,color,paraId)){toast('该区域已有标注');return}
+  S.doc.annos.push({id:Date.now()+Math.random().toString(36).slice(2,6),pid:paraId,color,text,note:'',ts:Date.now()});
+  saveDoc();renderAnnos();
+}
+function deleteAnno(annoId,markEl){
+  S.doc.annos=S.doc.annos.filter(a=>a.id!==annoId);
+  saveDoc();renderAnnos();
+  if(markEl){const p=markEl.parentNode;while(markEl.firstChild)p.insertBefore(markEl.firstChild,markEl);p.removeChild(markEl);p.normalize()}
+}
+// 重新打开文档时，把历史标注贴回正文
+function applyAnnos(){
+  if(!S.doc.annos||!S.doc.annos.length)return;
+  S.doc.annos.slice().sort((a,b)=>a.pid-b.pid).forEach(a=>{
+    const blk=$('#para-'+a.pid);
+    if(!blk)return;
+    const pen=blk.querySelector('.pen');
+    if(!pen)return;
+    const nodes=[];let full='';
+    const walker=document.createTreeWalker(pen,NodeFilter.SHOW_TEXT);
+    let n;while(n=walker.nextNode()){nodes.push({node:n,start:full.length});full+=n.data}
+    const idx=full.indexOf(a.text);
+    if(idx<0)return;
+    const end=idx+a.text.length;
+    const sn=nodes.find(v=>v.start<=idx&&idx<=v.start+v.node.length)||nodes[0];
+    const en=nodes.find(v=>v.start<end&&end<=v.start+v.node.length)||nodes[nodes.length-1];
+    try{
+      const range=document.createRange();
+      range.setStart(sn.node,idx-sn.start);
+      range.setEnd(en.node,end-en.start);
+      wrapRange(range,a.color,a.pid,a.note?'has-note':'');
+      // 悬停高亮可直接看到笔记内容
+      if(a.note)blk.querySelectorAll('mark.hl[data-pid="'+a.pid+'"]').forEach(m=>{if(m.textContent.trim()===a.text)m.title=a.note});
+    }catch(e){}
+  });
+}
+function renderAnnos(){
+  const list=$('#annoList');if(!list)return;
+  const items=S.doc.annos;
+  $('#annoTip').style.display=items.length?'none':'block';
+  $('#btnExportAnno').style.display=items.length?'inline-block':'none';
+  list.innerHTML='';
+  items.forEach(a=>{
+    const d=document.createElement('div');d.className='anno-item';
+    d.innerHTML='<div class="aq" style="background:'+ANN_COLORS[a.color]+'59;border-radius:5px;padding:3px 6px;display:inline">'+esc(a.text.slice(0,120))+'</div>'+
+      (a.note?'<div class="an">📝 '+esc(a.note)+'</div>':'')+
+      '<button class="adel" title="删除">✕</button>';
+    d.querySelector('.adel').onclick=e=>{e.stopPropagation();deleteAnno(a.id)};
+    d.onclick=()=>{const el=$('#para-'+a.pid);el&&el.scrollIntoView({behavior:'smooth',block:'center'})};
+    list.appendChild(d);
+  });
+}
+
+/* ================= 划词问答 ================= */
+const CHAT_SYS='你是专业的论文精读助手。用户正在阅读一篇英文学术论文，通常会选中一段原文向你提问。'+
+ '请：1) 紧扣用户提供的划选原文和段落上下文作答，可以补充你的领域知识但要说明哪部分是论文原文、哪部分是你的解释；'+
+ '2) 用中文回答，表述准确、直接，不要寒暄；3) 公式和符号用 LaTeX（行内 $...$，独立 $$...$$）；'+
+ '4) 如果划选内容不足以回答问题，先说明缺什么，再给出基于常识的可能解释并标注不确定性。'+
+ '5) 有时用户没有划选原文，此时会提供【当前论文背景】（论文标题、已有分析摘要、当前阅读位置附近原文），请基于它作答。';
+function setChatOpen(v){
+  $('#chatPanel').classList.toggle('open',v);
+  $('#layout').classList.toggle('chatpad',v); // 面板打开时正文右移让位，不遮挡
+}
+function openChatPanel(){setChatOpen(true);renderChat()}
+function setQuote(q){
+  S.pendingQuote=q;
+  const chip=$('#ctxChip');
+  if(q){
+    $('#ctxText').textContent=q.sel.length>260?q.sel.slice(0,260)+'…':q.sel;
+    chip.classList.add('show');
+  }else chip.classList.remove('show');
+}
+function renderChat(){
+  const box=$('#chatMsgs');
+  const msgs=S.doc?S.doc.chats:[];
+  if(!msgs.length){box.innerHTML='<div id="chatEmpty">选中句子点「问 AI」可精准提问；<br>不划词直接输入也可以——会自动附上当前论文背景<br><br>例如：这篇论文最大的创新点是什么？<br>这个公式的第二项物理含义是什么？</div>';return}
+  box.innerHTML='';
+  msgs.forEach(m=>{
+    const d=document.createElement('div');
+    d.className='msg '+(m.role==='user'?'user':'ai');
+    if(m.role==='user'){
+      let h='';
+      if(m.docCtx)h+='<div class="quote" style="border-color:#ddd3ba">📚 已自动附上当前论文背景</div>';
+      if(m.quote)h+='<div class="quote">'+esc(m.quote.sel.length>200?m.quote.sel.slice(0,200)+'…':m.quote.sel)+'</div>';
+      d.innerHTML=h+esc(m.content);
+    }else{setRich(d,m.content)}
+    box.appendChild(d);
+  });
+  const spin=document.createElement('div');
+  spin.className='msg ai';spin.id='chatSpin';
+  spin.innerHTML='<span class="spin"></span> 思考中…';
+  if(S.chatBusy)box.appendChild(spin);
+  box.scrollTop=box.scrollHeight;
+}
+/* 未划词提问时，自动拼装当前论文背景：标题 + 已有分析摘要 + 当前阅读位置附近原文 */
+function docContext(){
+  const d=S.doc;if(!d)return '';
+  let c='【论文标题】\n'+d.title;
+  if(d.report&&d.report.summary)c+='\n\n【已有分析摘要】\n'+d.report.summary.slice(0,800);
+  const last=(d.progress&&d.progress.lastPid)||0;
+  const around=d.paras.filter(p=>p.text&&p.id>=last-1&&p.id<=last+1).map(p=>p.text).join('\n').slice(0,900);
+  if(around)c+='\n\n【当前阅读位置附近原文】\n'+around;
+  if(!d.report){
+    const head=d.paras.filter(p=>p.text).slice(0,3).map(p=>p.text).join('\n').slice(0,700);
+    c+='\n\n【论文开头】\n'+head;
+  }
+  return c;
+}
+async function sendChat(){
+  if(S.chatBusy||!S.doc)return;
+  const inp=$('#chatInput');
+  const q=inp.value.trim();
+  if(!q){
+    if(!S.pendingQuote){toast('请输入问题；或先在正文中划选一段原文');return}
+    q='请解释这段原文的含义与作用';
+  }
+  const msg={role:'user',content:q,quote:S.pendingQuote,docCtx:S.pendingQuote?null:true};
+  S.doc.chats.push(msg);
+  S.pendingQuote=null;setQuote(null);
+  inp.value='';inp.style.height='auto';
+  S.chatBusy=true;renderChat();
+  const hist=S.doc.chats.slice(-10).map(m=>{
+    let c=m.content;
+    if(m.quote)c='【划选原文】\n'+m.quote.sel+'\n'+(m.quote.ctx?('\n【所在段落上下文】\n'+m.quote.ctx+'\n'):'')+'\n【问题】\n'+c;
+    else if(m.docCtx)c=docContext()+'\n\n【问题】\n'+c;
+    return{role:m.role,content:c};
+  });
+  try{
+    const ans=await chat([{role:'system',content:CHAT_SYS},...hist]);
+    S.doc.chats.push({role:'assistant',content:ans});
+    saveDoc();
+  }catch(e){
+    S.doc.chats.push({role:'assistant',content:'⚠ '+e.message});
+  }
+  S.chatBusy=false;renderChat();
+}
+
+/* ================= Agent 分析流水线 ================= */
+function chunkText(max){
+  const chunks=[];let cur='';
+  for(const p of S.doc.paras){
+    if(!p.text)continue;
+    if((cur+p.text).length>max&&cur){chunks.push(cur);cur=''}
+    cur+=(cur?'\n\n':'')+p.text;
+  }
+  if(cur)chunks.push(cur);
+  return chunks;
+}
+function stepUI(name){
+  const d=document.createElement('div');d.className='step';
+  d.innerHTML='<div class="ico"></div><div>'+name+'</div>';
+  $('#steps').appendChild(d);return d;
+}
+function stepState(el,st){
+  el.className='step '+st;
+  if(st==='ok'&&S.anaBusy){
+    S._anaOk=(S._anaOk||0)+1;
+    $('#btnAgent').textContent='⚡ 分析中 '+S._anaOk+'/6';
+    showProgress('Agent 后台分析 '+S._anaOk+'/6',S._anaOk/6);
+  }
+}
+async function runAnalysis(){
+  if(S.anaBusy||!S.doc){toast('Agent 正在后台分析中，稍候');return}
+  const s=getSettings();
+  if(!s.key){openMask('setMask');toast('请先填写 API Key');return}
+  S.anaBusy=true;S._anaOk=0;
+  $('#steps').innerHTML='';
+  $('#btnRerun').style.display='none';$('#btnExportReport').style.display='none';
+  const rep=$('#report');rep.className='empty-report';rep.textContent='Agent 正在后台分析，可继续阅读/翻译/划词提问，随时点顶栏按钮查看进度…';
+  showProgress('Agent 后台分析 0/6',0);
+  try{
+    const st1=stepUI('① 通读全文（分片摘要）');stepState(st1,'run');
+    const chunks=chunkText(11000);
+    const digests=new Array(chunks.length);
+    await runQueue(chunks.map((_,i)=>i),async i=>{
+      digests[i]=await chat([
+        {role:'system',content:'你是论文精读助手。对用户提供的论文片段提炼要点：涉及的问题、方法、数据/实验、公式与结论。中文输出，250字以内。'},
+        {role:'user',content:chunks[i]}]);
+    },s.conc);
+    stepState(st1,'ok');
+    const digestText=digests.map((d,i)=>'【片段'+(i+1)+'】\n'+d).join('\n\n');
+
+    const st2=stepUI('② 生成结构化总结');stepState(st2,'run');
+    const summary=await chat([
+      {role:'system',content:'你是资深科研工作者。基于分片要点写出结构化中文总结，使用小标题：**一句话概括**、**研究背景与问题**、**方法概述**、**实验与结果**、**结论与局限**。每节2-4句，公式用 $LaTeX$。只输出正文。'},
+      {role:'user',content:digestText}]);
+    stepState(st2,'ok');
+
+    const st3=stepUI('③ 提炼创新点');stepState(st3,'run');
+    const innov=await chat([
+      {role:'system',content:'从下面的论文要点中提炼创新点（contributions），3-6条。每条格式：**创新点标题**——说明它与已有工作的差异/新意。只输出条目列表。'},
+      {role:'user',content:digestText+'\n\n【全文总结】\n'+summary}]);
+    stepState(st3,'ok');
+
+    const st4=stepUI('④ 梳理研究方法与技术路线');stepState(st4,'run');
+    const method=await chat([
+      {role:'system',content:'梳理该论文的研究方法与技术路线，输出分步骤列表（Step 1…）：每步说明做什么、为什么、输入输出。公式用 $LaTeX$。中文输出。'},
+      {role:'user',content:digestText+'\n\n【全文总结】\n'+summary}]);
+    stepState(st4,'ok');
+
+    const st5=stepUI('⑤ 解析关键公式');stepState(st5,'run');
+    const mathParas=S.doc.paras.filter(p=>/[=∑∫∀∈±≤≥√^_{}]|\\frac|\$/.test(p.text)&&p.text.length>30).map(p=>p.text).join('\n\n').slice(0,15000);
+    const formula=mathParas?await chat([
+      {role:'system',content:'你是公式解析专家。从论文文本中找出最关键的公式（最多8个）。每个公式输出：$$LaTeX公式$$、**含义**：一句话、**符号解析**：逐个说明符号含义及在方法中的作用。若没有实质公式则直接说明。中文输出。'},
+      {role:'user',content:mathParas}]):'本文未检测到明显的数学公式段落。';
+    stepState(st5,'ok');
+
+    const st6=stepUI('⑥ 推荐同类文献');stepState(st6,'run');
+    const related=await chat([
+      {role:'system',content:'你是熟悉该领域的科研导师。基于这篇论文的主题、方法与结论，推荐 6 篇值得延伸阅读的相关文献（经典奠基工作、直接对比方法、后续改进等）。'+
+       '每条格式：**《标题》**（第一作者 et al., 期刊/会议 年份）——一句话说明它与本文的关系、为何值得一读。'+
+       '要求：只推荐你确定真实存在的知名文献，宁缺毋滥，不要编造；如果确定的相关文献不足 6 篇，可以少给。'+
+       '最后单独输出一行：⚠ 以上推荐由模型凭训练知识生成，作者/年份等信息请检索核实。'},
+      {role:'user',content:digestText+'\n\n【全文总结】\n'+summary+'\n\n【方法路线】\n'+method}]);
+    stepState(st6,'ok');
+
+    S.doc.report={summary,innov,method,formula,related,ts:Date.now()};
+    saveDoc();renderReport();
+    hideProgress();
+    if($('#anaMask').classList.contains('show'))toast('Agent 分析完成 ✓');
+    else toast('⚡ Agent 分析完成，点击顶栏「Agent 分析」查看报告',5000);
+  }catch(e){
+    [...$('#steps').children].forEach(el=>{if(el.className==='step run')stepState(el,'err')});
+    rep.className='empty-report';
+    rep.innerHTML='⚠ '+esc(e.message)+'<br><br>请检查设置中的 Base URL / Key / 模型名，然后点「重新分析」。';
+    $('#btnRerun').style.display='inline-block';
+    hideProgress();
+    toast('Agent 分析失败：'+e.message,6000);
+  }finally{
+    S.anaBusy=false;
+    const btn=$('#btnAgent');btn.classList.remove('running');btn.textContent='⚡ Agent 分析';
+  }
+}
+function mdLite(md){
+  const blocks=String(md).split(/\n{2,}/);
+  return blocks.map(b=>{
+    const lines=b.split('\n');
+    if(/^#{1,4}\s/.test(b))return '<p style="font-weight:700;margin:10px 0 4px">'+esc(b.replace(/^#{1,4}\s*/,''))+'</p>';
+    if(lines.every(l=>/^([-*•]|\d+[.、)])\s/.test(l.trim())))
+      return '<ul>'+lines.map(l=>'<li>'+inlineMd(l.trim().replace(/^([-*•]|\d+[.、)])\s*/,''))+'</li>').join('')+'</ul>';
+    return '<p>'+lines.map(inlineMd).join('<br>')+'</p>';
+  }).join('');
+}
+function inlineMd(t){return esc(t).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/`([^`]+)`/g,'<code>$1</code>')}
+/* ---- 数学公式安全渲染：先摘出公式占位，再走 mdLite，最后用 KaTeX 直接渲染 ---- */
+function setRich(el,md){
+  const maths=[];
+  let s=String(md);
+  s=s.replace(/\$\$([\s\S]+?)\$\$/g,(m,t)=>{maths.push({t:t.trim(),disp:true});return '\u2401'+(maths.length-1)+'\u2402'});
+  s=s.replace(/\$([^$\n]+?)\$/g,(m,t)=>{maths.push({t:t.trim(),disp:false});return '\u2401'+(maths.length-1)+'\u2402'});
+  let html=mdLite(s);
+  html=html.replace(/\u2401(\d+)\u2402/g,(m,k)=>'<span class="mth" data-k="'+k+'"></span>');
+  el.innerHTML=html;
+  el.querySelectorAll('.mth').forEach(sp=>{
+    const mm=maths[+sp.dataset.k];
+    if(!mm)return;
+    if(window.katex){
+      try{katex.render(mm.t,sp,{displayMode:mm.disp,throwOnError:false});return}catch(e){}
+    }
+    sp.textContent=mm.t; // KaTeX 不可用时退回原文
+  });
+}
+/* ---- 中英句级联动 ---- */
+function enSents(text){return String(text).split(/(?<=[.!?])\s+/).filter(x=>x.trim().length)}
+function senHtml(text){
+  const ss=enSents(text);
+  if(ss.length<2)return esc(text);
+  return ss.map((s,i)=>'<span class="sen" data-s="'+i+'">'+esc(s)+'</span>').join(' ');
+}
+function zhSents(plain){const out=[];const re=/[^。！？；\n]+(?:[。！？；]+|$)/g;let m;while((m=re.exec(plain)))out.push({i:m.index,t:m[0].length});return out}
+let _linkSpans=null;
+function linkHide(){document.querySelectorAll('.zsen.lit').forEach(s=>s.classList.remove('lit'))}
+/* 渲染译文时一次性按中文句切分并包裹 .zsen；悬停只切换点亮类，不再实时切 DOM */
+function zhSentenceize(zEl){
+  if(zEl.dataset.zs)return +zEl.dataset.zs;
+  const ctx=[];let plain='';
+  const w=document.createTreeWalker(zEl,NodeFilter.SHOW_TEXT,{acceptNode(n){
+    return n.parentElement&&n.parentElement.closest('.katex')?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT}});
+  let n;while(n=w.nextNode()){ctx.push({node:n,s:plain.length});plain+=n.data}
+  const zs=zhSents(plain);
+  if(!zs.length){zEl.dataset.zs='0';return 0}
+  for(let k=zs.length-1;k>=0;k--){ // 倒序处理，前面的节点引用不受影响
+    const seg=zs[k];
+    ctx.forEach(({node,s:s0})=>{
+      if(!node.parentNode)return;
+      const a=Math.max(seg.i,s0),b=Math.min(seg.i+seg.t,s0+node.length);
+      if(a>=b)return;
+      let t=node;
+      if(b-s0<t.length)t.splitText(b-s0);
+      if(a-s0>0)t=t.splitText(a-s0);
+      const sp=document.createElement('span');sp.className='zsen';sp.dataset.i=k;
+      t.parentNode.insertBefore(sp,t);sp.appendChild(t);
+    });
+  }
+  zEl.dataset.zs=String(zs.length);
+  return zs.length;
+}
+function linkShow(pid,i){
+  linkHide();
+  const p=S.doc.paras.find(x=>x.id===pid);
+  if(!p||!p.zh||!p.text)return;
+  const nEn=enSents(p.text).length;
+  if(nEn<2)return;
+  const zEl=document.querySelector('#zh-'+pid+' .zhmd');
+  if(!zEl)return;
+  const nZh=zhSentenceize(zEl);
+  if(!nZh)return;
+  const k=Math.min(nZh-1,Math.floor(i*nZh/nEn)); // 按比例对位
+  zEl.querySelectorAll('.zsen').forEach(s=>{if(+s.dataset.i===k)s.classList.add('lit')});
+}
+function renderReport(){
+  const r=S.doc&&S.doc.report;if(!r)return;
+  const rep=$('#report');rep.className='';rep.style.display='block';
+  rep.innerHTML='';
+  [['📄 结构化总结',r.summary],['💡 创新点',r.innov],['🛠 研究方法与技术路线',r.method],['∑ 公式解析',r.formula],['🔭 同类文献推荐',r.related||'本次分析未生成文献推荐。']].forEach(pair=>{
+    const h=document.createElement('h3');h.textContent=pair[0];rep.appendChild(h);
+    const sec=document.createElement('div');sec.className='sec';setRich(sec,pair[1]);rep.appendChild(sec);
+  });
+  const ft=document.createElement('p');
+  ft.style.cssText='color:var(--muted);font-size:11.5px;margin-top:14px';
+  ft.textContent='生成于 '+fmtTime(r.ts)+' · 已随文献存入本地文献库';
+  rep.appendChild(ft);
+  $('#btnExportReport').style.display='inline-block';
+}
+
+/* ================= 导出 ================= */
+function exportReading(){
+  if(!S.doc)return;
+  let md='# 精读对照 · '+S.doc.title+'\n\n> 由 小唯阅读器 生成 · '+new Date().toLocaleString()+'\n\n';
+  S.doc.paras.forEach(p=>{
+    if(p.type==='fig'){md+='> 🖼 [原文插图 · 第 '+p.page+' 页，请在应用内查看]\n\n';return}
+    md+='## P'+p.id+(p.type==='head'?'（章节）':'')+' [p.'+p.page+']\n\n'+p.text+'\n\n';
+    if(p.zh)md+='**【译文】** '+p.zh+'\n\n';
+    S.doc.annos.filter(a=>a.pid===p.id).forEach(a=>{md+='> 🖍 '+a.text+(a.note?'\n>\n> 📝 '+a.note:'')+'\n\n'});
+  });
+  download('精读对照-'+S.doc.title.slice(0,20)+'-'+Date.now()+'.md',md);
+}
+function exportAnnos(){
+  if(!S.doc.annos.length)return;
+  let md='# 精读标注 · '+S.doc.title+'\n\n';
+  S.doc.annos.forEach(a=>{md+='- **P'+a.pid+'** 「'+a.text+'」'+(a.note?'  \n  📝 '+a.note:'')+'  \n  ('+fmtTime(a.ts)+')\n'});
+  download('精读标注-'+Date.now()+'.md',md);
+}
+function exportReport(){
+  if(!S.doc||!S.doc.report)return;
+  const r=S.doc.report;
+  download('分析报告-'+S.doc.title.slice(0,20)+'-'+Date.now()+'.md',
+    '# Agent 分析报告 · '+S.doc.title+'\n\n> 生成时间：'+fmtTime(r.ts)+
+    '\n\n## 结构化总结\n\n'+r.summary+'\n\n## 创新点\n\n'+r.innov+'\n\n## 研究方法与技术路线\n\n'+r.method+'\n\n## 公式解析\n\n'+r.formula+'\n\n## 同类文献推荐\n\n'+(r.related||'无')+'\n');
+}
+function exportChat(){
+  if(!S.doc||!S.doc.chats.length){toast('暂无问答记录');return}
+  let md='# 划词问答 · '+S.doc.title+'\n\n';
+  S.doc.chats.forEach(m=>{
+    if(m.role==='user'){
+      md+='## 🙋 提问\n';
+      if(m.quote)md+='> 划选原文：'+m.quote.sel+'\n\n';
+      md+=m.content+'\n\n';
+    }else md+='## 🤖 回答\n\n'+m.content+'\n\n';
+  });
+  download('划词问答-'+S.doc.title.slice(0,20)+'-'+Date.now()+'.md',md);
+}
+
+/* ================= 进度与弹窗 ================= */
+function showProgress(text,pct){$('#progressWrap').classList.add('show');$('#progressText').textContent=text;$('#progressFill').style.width=Math.round(pct*100)+'%'}
+function hideProgress(){$('#progressWrap').classList.remove('show')}
+function openMask(id){$('#'+id).classList.add('show')}
+function closeMask(id){$('#'+id).classList.remove('show')}
+
+/* ================= 文档打开流程 ================= */
+async function handleFile(file){
+  if(!/\.pdf$/i.test(file.name)){toast('请选择 PDF 文件');return}
+  showProgress('正在解析 PDF…',0.1);
+  try{
+    const paras=await parsePDF(file);
+    if(!paras.length)throw new Error('未解析出有效段落');
+    const id=hash(file.name+file.size);
+    const exist=await dbGet(id);
+    if(exist){
+      S.doc=exist;
+      renderArticle();renderAnnos();
+      toast('已从文献库打开，恢复进度/译文/标注/问答 ✓');
+    }else{
+      S.doc={id,title:deriveTitle(paras,file.name),paras,annos:[],chats:[],report:null,
+        progress:{lastPid:0,pct:0,ts:0},createdAt:Date.now(),lastReadAt:Date.now()};
+      await dbPut(S.doc);
+      renderArticle();renderAnnos();
+      toast('解析完成：共 '+paras.length+' 段，已存入本地文献库');
+    }
+    renderLib();showResume();
+  }catch(e){toast('解析失败：'+e.message,5000)}
+  finally{hideProgress()}
+}
+async function openDoc(id){
+  const d=await dbGet(id);
+  if(!d){toast('文献不存在');renderLib();return}
+  S.doc=d;
+  renderArticle();renderAnnos();
+  setQuote(null);
+  renderLib();showResume();
+  toast('已打开《'+d.title+'》· 上次读到 '+((d.progress&&d.progress.pct)||0)+'%');
+}
+/* ---- Agent 辅助排版：本地解析为底，把段落清单交给 LLM 找噪声/误拆/类型错，回写前严格校验，失败不动原数据 ---- */
+async function aiRelayout(){
+  if(!S.doc||!S.doc.paras){toast('请先打开一篇文献');return}
+  const s=getSettings();
+  if(!s.key){openMask('setMask');toast('请先在「设置」中绑定 Agent（推荐点「智谱 GLM-4-Flash」免费接入）',6000);return}
+  const btn=$('#btnAIRelayout');if(btn){btn.disabled=true;btn.textContent='AI 修排版中…'}
+  showProgress('Agent 正在修正排版…',0.3);
+  try{
+    const list=S.doc.paras.map(p=>({id:p.id,type:p.type,
+      t:(p.text||'(插图)').replace(/\s+/g,' ').slice(0,90)}));
+    const prompt='你是学术论文排版审校员。下面是一篇论文经本地解析器切出的段落清单（id/类型/文本前90字符）。'+
+      '请找出解析器的错误，只输出一个 JSON 对象（不要任何其他文字）：\n'+
+      '{"delete":[噪声段id…],"merge":[[id1,id2]…],"retype":[{"id":…,"type":"head"}…]}\n'+
+      '规则：delete=期刊水印/页眉页脚残留/乱码/无意义碎段；merge=被错误拆开的同一段落（仅相邻段，按 id 升序对）；'+
+      'retype=明显的正文↔标题误判（谨慎，只改把握大的）。没有可修正项就输出 {"delete":[],"merge":[],"retype":[]}。\n'+
+      '段落清单：\n'+JSON.stringify(list);
+    const raw=await chat([{role:'user',content:prompt}],0.1);
+    const m=raw.match(/\{[\s\S]*\}/);if(!m)throw new Error('AI 未返回有效 JSON');
+    const plan=JSON.parse(m[0]);
+    const ids=new Set(S.doc.paras.map(p=>p.id));
+    const del=new Set((plan.delete||[]).filter(x=>ids.has(x)&&typeof x==='number'));
+    const merges=(plan.merge||[]).filter(pair=>Array.isArray(pair)&&pair.length===2&&ids.has(pair[0])&&ids.has(pair[1]));
+    const retypes=new Map((plan.retype||[]).filter(r=>r&&ids.has(r.id)&&['head','body'].includes(r.type)).map(r=>[r.id,r.type]));
+    if(!del.size&&!merges.length&&!retypes.size){toast('Agent 审校完成：本地排版没有发现问题 ✓');return}
+    // 应用：merge 按组内顺序重排（保持相邻），delete 剔除，retype 改类型
+    const mergedOf=new Map();merges.forEach((pair,i)=>pair.forEach(id=>mergedOf.set(id,'m'+i)));
+    const groups=new Map();merges.forEach((pair,i)=>groups.set('m'+i,[]));
+    const out=[];
+    S.doc.paras.forEach(p=>{
+      const g=mergedOf.get(p.id);
+      if(del.has(p.id))return;
+      if(g){const arr=groups.get(g);arr.push(p);return}
+      if(retypes.has(p.id))p.type=retypes.get(p.id);
+      out.push(p);
+    });
+    groups.forEach(arr=>{
+      if(!arr.length)return;
+      arr.sort((a,b)=>a.id-b.id);
+      const f=arr[0];
+      f.text=arr.map(x=>x.text).filter(Boolean).join(' ');
+      if(arr.some(x=>x.zh))f.zh=arr.map(x=>x.zh).filter(Boolean).join(' ');
+      if(retypes.has(f.id))f.type=retypes.get(f.id);
+      out.push(f);
+    });
+    out.sort((a,b)=>a.id-b.id);
+    out.forEach((p,i)=>p.id=i+1);
+    S.doc.paras=out;
+    await dbPut(S.doc);
+    renderArticle();renderAnnos();
+    toast('AI 排版已应用：删除噪声 '+del.size+' 段 · 合并 '+merges.length+' 组 · 改类型 '+retypes.size+' 处（原文与本地排版保留为底，可随时重新导入恢复）',7000);
+  }catch(e){toast('AI 修排版失败：'+e.message+'（本地排版未受影响）',6000)}
+  finally{
+    if(btn){btn.disabled=false;btn.textContent='🤖 AI 排版'}
+    hideProgress();
+  }
+}
+
+/* ================= 事件绑定 ================= */
+$('#btnOpen').onclick=()=>$('#fileInput').click();
+$('#fileInput').onchange=e=>{if(e.target.files[0])handleFile(e.target.files[0]);e.target.value=''};
+$('#bkInput').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{
+    const data=JSON.parse(await f.text());
+    const docs=(data.app==='ptx'&&Array.isArray(data.docs))?data.docs:null;
+    if(!docs)throw new Error('不是本应用的备份文件');
+    let n=0;
+    for(const d of docs){if(d&&d.id&&Array.isArray(d.paras)){await dbPut(d);n++}}
+    renderLib();
+    toast('导入完成：'+n+' 篇文献已合并进文献库 ✓');
+  }catch(err){toast('导入失败：'+err.message,5000)}
+  e.target.value='';
+};
+// 拖拽
+const dz=$('#dropzone');
+['dragover','dragenter'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();dz&&dz.classList.add('drag')}));
+['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();dz&&dz.classList.remove('drag')}));
+document.addEventListener('drop',e=>{if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0])});
+
+// 顶栏
+$('#btnTransAll').onclick=translateAll;
+$('#btnAgent').onclick=()=>{
+  if(!S.doc){toast('请先打开一篇文献');return}
+  if(S.anaBusy){$('#anaMask').classList.add('show');return} // 查看进度；关闭弹窗不影响后台分析
+  if(S.doc.report){
+    $('#anaMask').classList.add('show');$('#steps').innerHTML='';
+    renderReport();$('#btnRerun').style.display='inline-block';
+  }else runAnalysis();
+};
+$('#btnRerun').onclick=()=>{if(!S.anaBusy)runAnalysis()};
+$('#btnExport').onclick=exportReading;
+$('#btnExportAnno').onclick=exportAnnos;
+$('#btnExportReport').onclick=exportReport;
+$('#btnCloseAna').onclick=()=>closeMask('anaMask');
+$('#btnChat').onclick=()=>{setChatOpen(!$('#chatPanel').classList.contains('open'));renderChat()};
+$('#chatClose').onclick=()=>setChatOpen(false);
+$('#chatNew').onclick=()=>{
+  if(S.doc&&S.doc.chats.length&&confirm('清空当前问答记录，开始新对话？'))
+    {S.doc.chats=[];saveDoc();renderChat()}
+};
+$('#chatExport').onclick=exportChat;
+$('#chatSend').onclick=e=>{e.preventDefault();sendChat()};
+$('#chatForm').onsubmit=e=>{e.preventDefault();sendChat()};
+$('#chatInput').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat()}
+});
+$('#chatInput').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(120,this.scrollHeight)+'px'});
+$('#ctxX').onclick=()=>setQuote(null);
+$('#resume').onclick=e=>{
+  if(e.target.id==='resumeX'){$('#resume').classList.remove('show');return}
+  const last=S.doc.progress.lastPid;
+  const el=$('#para-'+last);el&&el.scrollIntoView({behavior:'smooth',block:'start'});
+  $('#resume').classList.remove('show');
+};
+$('#resumeX').onclick=()=>$('#resume').classList.remove('show');
+
+$('#gear').onclick=()=>{
+  const s=getSettings();
+  $('#sBase').value=s.base;$('#sKey').value=s.key;$('#sModel').value=s.model;
+  $('#sConc').value=s.conc;$('#sTemp').value=s.temp;$('#sGap').value=s.gap||1000;
+  $('#sFallback').checked=s.fallback!==false;
+  openMask('setMask');
+};
+/* ---- 主题：清爽白（默认）→ 护眼纸 → 夜间 循环切换，本机持久化 ---- */
+const THEMES=['clean','paper','dark'];
+const THEME_META={clean:{ico:'☀',name:'清爽白'},paper:{ico:'📖',name:'护眼纸'},dark:{ico:'🌙',name:'夜间'}};
+function applyTheme(t){
+  if(!THEME_META[t])t='clean';
+  document.body.dataset.theme=t;
+  try{localStorage.setItem('lw_theme',t)}catch(e){}
+  const b=$('#themeBtn');if(b)b.textContent=THEME_META[t].ico;
+}
+$('#themeBtn').onclick=()=>{
+  const cur=THEMES.indexOf(document.body.dataset.theme||'clean');
+  const next=THEMES[(cur+1)%THEMES.length];
+  applyTheme(next);
+  toast('主题已切换：'+THEME_META[next].name,1600);
+};
+$('#btnAIRelayout').onclick=aiRelayout;
+$('#dzSetup').onclick=()=>{$('#gear').click()};
+applyTheme((function(){try{return localStorage.getItem('lw_theme')}catch(e){return null}})()||'clean');
+$$('.modal header .x').forEach(b=>b.onclick=()=>closeMask(b.dataset.close));
+$$('.modal-mask').forEach(m=>m.addEventListener('mousedown',e=>{if(e.target===m)m.classList.remove('show')}));
+$('#btnSave').onclick=()=>{
+  store.set(SET_KEY,{base:$('#sBase').value.trim()||'https://api.deepseek.com/v1',key:$('#sKey').value.trim(),
+    model:$('#sModel').value.trim()||'deepseek-chat',conc:+$('#sConc').value||2,temp:+$('#sTemp').value||0.3,gap:+$('#sGap').value||1000,fallback:$('#sFallback').checked});
+  closeMask('setMask');toast('设置已保存（仅存于本机）');
+};
+/* 免费引擎一键接入：预填 Base URL + 模型名并打开注册页，用户拿自己的 Key 粘贴即用（额度跟各自账号走，与发布者无关） */
+const FREE_PRESETS={
+  zhipu:{base:'https://open.bigmodel.cn/api/paas/v4',model:'glm-4-flash',reg:'https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys',tip:'智谱开放平台 → 创建 API Key（GLM-4-Flash 永久免费，不按 token 计费）'},
+  silicon:{base:'https://api.siliconflow.cn/v1',model:'THUDM/GLM-4-9B-0414',reg:'https://cloud.siliconflow.cn/me/account/ak',tip:'硅基流动 → 新建 API 密钥（免费小模型不收费；免费模型清单会轮换，可在 pricing 页确认）'},
+  bailian:{base:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'qwen-flash',reg:'https://bailian.console.aliyun.com/?apiKey=1',tip:'阿里云百炼（北京地域）→ 创建 API Key（新人每模型 100万 tokens、90 天；用完记得在控制台开「用完即停」防扣费）'},
+  openrouter:{base:'https://openrouter.ai/api/v1',model:'nvidia/nemotron-3-super-120b-a12b:free',reg:'https://openrouter.ai/settings/keys',tip:'OpenRouter → Create Key（:free 结尾的模型免费，约 50 次/天；模型清单在 openrouter.ai/models 筛 Free）'},
+};
+$$('button[data-preset]').forEach(b=>b.onclick=()=>{
+  const p=FREE_PRESETS[b.dataset.preset];if(!p)return;
+  $('#sBase').value=p.base;
+  $('#sModel').value=p.model;
+  if(!$('#sKey').value)$('#sKey').focus();
+  window.open(p.reg,'_blank');
+  toast(p.tip+' → Key 粘贴到「API Key」框，点「测试连接」验证',9000);
+});
+/* 一键检测本地推理服务（无限离线翻译的唯一可靠途径） */
+$('#btnDetectLocal').onclick=async()=>{
+  const b=$('#btnDetectLocal');b.disabled=true;b.textContent='检测中…';
+  const cands=[
+    {name:'Ollama',base:'http://localhost:11434/v1',api:'/api/tags',pick:j=>(j.models||[]).map(m=>m.name)},
+    {name:'LM Studio',base:'http://localhost:1234/v1',api:'/v1/models',pick:j=>((j.data||[]).map(m=>m.id))},
+    {name:'llama.cpp',base:'http://localhost:8080/v1',api:'/v1/models',pick:j=>((j.data||[]).map(m=>m.id))},
+  ];
+  let found=null;
+  for(const c of cands){
+    try{
+      const r=await fetch('http://localhost'+c.api.replace(/^.*:\/\/[^/]+/,''),{});
+      if(!r.ok)continue;
+      const j=await r.json();
+      const models=c.pick(j);
+      if(models&&models.length){found={...c,models};break}
+    }catch(e){}
+  }
+  b.disabled=false;b.textContent='🔍 检测本地模型';
+  if(!found){toast('未检测到本地推理服务。请先安装 Ollama（设 OLLAMA_ORIGINS=* 后重启）或 LM Studio（开启 CORS），并拉取模型（如 qwen3:8b）',7000);return}
+  $('#sBase').value=found.base;
+  $('#sModel').value=found.models[0];
+  if(!$('#sKey').value)$('#sKey').value='local';
+  toast('✓ 已连接 '+found.name+'，检测到 '+found.models.length+' 个模型：'+found.models[0].slice(0,30)+'（点「保存」生效，翻译/分析全走本地、无限额度）',7000);
+};
+$('#btnTest').onclick=async()=>{
+  const b=$('#btnTest');b.disabled=true;b.textContent='测试中…';
+  const bak=getSettings();
+  store.set(SET_KEY,{base:$('#sBase').value.trim()||bak.base,key:$('#sKey').value.trim(),model:$('#sModel').value.trim()||bak.model,temp:0,gap:+$('#sGap').value||1000});
+  try{const r=await chat([{role:'user',content:'ping（请只回复pong）'}],0);toast('连接成功 ✓ '+r.slice(0,30))}
+  catch(e){toast('连接失败：'+e.message,5000)}
+  finally{store.set(SET_KEY,bak);b.disabled=false;b.textContent='测试连接'}
+};
+
+// 侧栏 tab
+$$('#side .tabs button').forEach(b=>b.onclick=()=>{
+  $$('#side .tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  ['lib','outline','anno'].forEach(t=>{$('#tab-'+t).style.display=b.dataset.tab===t?'block':'none'});
+});
+
+// 阅读进度：滚动追踪（节流，_trkTimer/_trkDocId 已在 trackProgress 处声明）
+$('#reader').addEventListener('scroll',()=>{
+  if(!S.doc)return;
+  clearTimeout(_trkTimer);
+  _trkDocId=S.doc.id; // 记录触发滚动时的文献，切换后到期即失效
+  _trkTimer=setTimeout(trackProgress,400);
+});
+
+// 句级联动：悬停英文句子 → 对应中文句子加灰底
+$('#reader').addEventListener('mouseover',e=>{
+  const sen=e.target.closest('.sen');if(!sen)return;
+  const pen=sen.closest('.pen');if(!pen)return;
+  linkShow(+pen.dataset.pid,+sen.dataset.s);
+});
+$('#reader').addEventListener('mouseout',e=>{if(e.target.closest('.sen'))linkHide()});
+// 段落悬停按钮：翻译/重译；插图点击放大
+$('#reader').addEventListener('click',e=>{
+  const fw=e.target.closest('.figwrap');
+  if(fw){
+    const im=fw.querySelector('img');
+    if(im){$('#lightbox img').src=im.src;$('#lightbox').classList.add('show')}
+    return;
+  }
+  const btn=e.target.closest('.pact button');if(!btn)return;
+  const pid=+btn.closest('.pblock').querySelector('.pen').dataset.pid;
+  const p=S.doc.paras.find(x=>x.id===pid);if(!p)return;
+  if(btn.dataset.act==='re'){p.zh=null;p.err=null}
+  translatePara(p);
+});
+
+// ---- 高亮：选区调色盘 ----
+const palette=$('#hlPalette'),markMenu=$('#markMenu');
+let pendingRange=null,pendingPid=null,activeMark=null;
+document.addEventListener('mouseup',e=>{
+  if(palette.contains(e.target)||markMenu.contains(e.target)||$('#chatPanel').contains(e.target))return;
+  setTimeout(()=>{
+    const sel=window.getSelection();
+    if(sel&&!sel.isCollapsed&&sel.rangeCount){
+      const node=sel.anchorNode;
+      const penEl=node&&(node.nodeType===3?node.parentNode:node).closest('.pen');
+      if(penEl){
+        pendingRange=sel.getRangeAt(0).cloneRange();
+        pendingPid=+penEl.dataset.pid;
+        const r=sel.getRangeAt(0).getBoundingClientRect();
+        palette.style.left=Math.max(8,Math.min(window.innerWidth-260,r.left+r.width/2-110))+'px';
+        palette.style.top=(r.bottom+8)+'px';
+        palette.classList.add('show');markMenu.classList.remove('show');
+        return;
+      }
+    }
+    palette.classList.remove('show');
+  },10);
+});
+$$('#hlPalette .c').forEach(c=>c.onclick=()=>{
+  if(pendingRange){addAnno(pendingRange,c.dataset.c,pendingPid);window.getSelection().removeAllRanges()}
+  palette.classList.remove('show');
+});
+$('#btnAsk').onclick=()=>{
+  if(!pendingRange)return;
+  const pid=pendingPid;
+  const p=S.doc.paras.find(x=>x.id===pid);
+  const selText=pendingRange.toString().trim();
+  // 上下文：所在段落（截断）+ 前一段
+  let ctx='';
+  if(p){
+    const prev=S.doc.paras.find(x=>x.id===pid-1);
+    if(prev)ctx+='…'+prev.text.slice(-300)+'\n\n';
+    ctx+=p.text.slice(0,800);
+  }
+  setQuote({sel:selText,ctx});
+  window.getSelection().removeAllRanges();
+  palette.classList.remove('show');
+  openChatPanel();
+  $('#chatInput').focus();
+  toast('已带上划选原文，输入你的问题');
+};
+$('#hlCancel').onclick=()=>{palette.classList.remove('show');window.getSelection().removeAllRanges()};
+
+// ---- 高亮：点击已有标注 ----
+document.addEventListener('click',e=>{
+  const mark=e.target.closest('mark.hl');
+  if(mark){
+    activeMark=mark;
+    const r=mark.getBoundingClientRect();
+    markMenu.style.left=Math.min(window.innerWidth-150,r.left)+'px';
+    markMenu.style.top=(r.bottom+6)+'px';
+    markMenu.classList.add('show');palette.classList.remove('show');
+    e.stopPropagation();
+  }else if(!markMenu.contains(e.target))markMenu.classList.remove('show');
+});
+function annoIdFromMark(){
+  const pid=+activeMark.dataset.pid;
+  const text=[...activeMark.childNodes].map(n=>n.textContent).join('').trim();
+  return S.doc.annos.find(a=>a.pid===pid&&a.text===text);
+}
+$('#mDel').onclick=()=>{
+  const a=annoIdFromMark();
+  if(a)deleteAnno(a.id,activeMark);
+  else if(activeMark){const p=activeMark.parentNode;while(activeMark.firstChild)p.insertBefore(activeMark.firstChild,activeMark);p.removeChild(activeMark)}
+  markMenu.classList.remove('show');
+};
+$('#mNote').onclick=()=>{
+  const a=annoIdFromMark();
+  if(!a){markMenu.classList.remove('show');return}
+  const v=prompt('标注笔记：',a.note||'');
+  if(v!=null){a.note=v.trim();saveDoc();renderAnnos()}
+  if(activeMark){activeMark.classList.toggle('has-note',!!a.note);activeMark.title=a.note||''} // 小笔标记随笔记增删
+  markMenu.classList.remove('show');
+};
+
+// 插图灯箱：点击遮罩/按 Esc 关闭
+$('#lightbox').onclick=()=>$('#lightbox').classList.remove('show');
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#lightbox').classList.remove('show')});
+// 新建文件夹：回车确认移入
+$('#newFolderName').addEventListener('keydown',async e=>{
+  if(e.key!=='Enter')return;
+  const name=e.target.value.trim();
+  if(!name)return;
+  await moveToFolder(_fmDocId,name);
+  closeMask('folderMask');
+});
+
+// 启动
+renderLib();
+window.addEventListener('load',()=>{if($('#article'))renderMath($('#article'))});
+
+/* ---- 桌面版附加能力：检查更新 / 关于（网页版自动隐藏，不影响任何阅读功能） ---- */
+(function(){
+  const api=window.xiaoweiDesktop;
+  if(!api)return;
+  const bu=$('#btnUpdate'), ba=$('#btnAbout');
+  let info=null, readyVersion=null, busy=false;
+  const label=(t,dis)=>{if(bu){bu.textContent=t;bu.disabled=!!dis}};
+  const reset=()=>{busy=false;label(readyVersion?'安装 '+readyVersion:'检查更新',false)};
+  api.getAppInfo().then(i=>{info=i});
+  api.onUpdateState(s=>{
+    switch(s.type){
+      case 'checking': label('检查中…',true); break;
+      case 'available': toast('发现新版本 v'+s.version+'，正在后台下载…',5000); label('下载中…',true); break;
+      case 'not-available': toast('已是最新版本'); reset(); break;
+      case 'progress': label('下载中 '+s.percent+'%',true); break;
+      case 'downloaded': readyVersion=s.version; toast('新版 v'+s.version+' 已下载，点「安装」后重启生效',6000); reset(); break;
+      case 'error': toast('检查更新失败：'+s.message,6000); reset(); break;
+    }
+  });
+  const check=async()=>{
+    if(busy)return;
+    busy=true;label('检查中…',true);
+    const r=await api.checkUpdate();
+    if(r&&r.ok===false){toast(r.message,5000);busy=false;label('检查更新',false)}
+  };
+  const about=async()=>{
+    if(!info)info=await api.getAppInfo();
+    alert('小唯阅读器 · Xiaowei Reader\n版本 v'+info.version+
+      '\n\n像读小说一样读论文。\n纯本地解析与存储，数据只在你自己的电脑上。'+
+      (info.repoPlaceholder?'':'\n\n项目主页：'+info.repoUrl));
+  };
+  if(bu){bu.style.display='';bu.onclick=()=>readyVersion?api.quitAndInstall():check()}
+  if(ba){ba.style.display='';ba.onclick=about}
+  api.onMenuAction(a=>{
+    if(a==='open'){ $('#fileInput').click(); }
+    else if(a==='check-update'){ if($('#setMask'))openMask('setMask'); check(); }
+    else if(a==='about'){ about(); }
+  });
+})();
+</script>
+</body>
+</html>

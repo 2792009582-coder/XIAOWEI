@@ -1,0 +1,28 @@
+{
+  "name": "xiaowei-reader-desktop",
+  "productName": "小唯阅读器",
+  "version": "1.0.0",
+  "description": "小唯阅读器 · Xiaowei Reader —— 桌面版（Electron 壳）",
+  "main": "main.js",
+  "author": "Xiaowei Reader",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "prestart": "node prepare.js",
+    "start": "electron .",
+    "icon": "node build/make-icon.js",
+    "prepare-app": "node prepare.js",
+    "build": "node prepare.js && node node_modules/electron-builder/out/cli/cli.js --win --publish never",
+    "build:dir": "node prepare.js && node node_modules/electron-builder/out/cli/cli.js --win --dir",
+    "release": "node prepare.js && node node_modules/electron-builder/out/cli/cli.js --win --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
+  },
+  "devDependencies": {
+    "electron": "^31.3.0",
+    "electron-builder": "^26.18.0",
+    "pdfjs-dist": "3.11.174",
+    "katex": "0.16.9"
+  }
+}

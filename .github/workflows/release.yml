@@ -1,0 +1,46 @@
+name: 发布桌面版
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: 安装依赖
+        working-directory: desktop
+        run: npm ci
+
+      - name: 构建安装包与便携包
+        working-directory: desktop
+        run: npm run build
+
+      - name: 上传到 GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            desktop/out/*.exe
+            desktop/out/*.zip
+            desktop/out/latest.yml
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
