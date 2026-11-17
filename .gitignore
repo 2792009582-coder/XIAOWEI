@@ -5,7 +5,7 @@ desktop/app/
 
 # 仅本地保留的文档（不发布到仓库）
 DEVELOPMENT.md
-README.md
+README-technical.md
 
 # 系统与编辑器
 .DS_Store
