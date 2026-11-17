@@ -22,7 +22,11 @@
 
 ### 第一步：拿到它
 
-- **安装版**：下载 `XiaoweiReader-x.x.x-setup.exe`，双击安装。以后可以自动更新。
+**最快的方式：[点这里下载最新版](https://github.com/2792009582-coder/XIAOWEI/releases/latest)**
+
+打开下载页后，拉到页面最底部，找到 **Assets** 区域并点开，就能看到安装包：
+
+- **安装版**：下载 `XiaoweiReader-x.x.x-setup.exe`，双击安装。以后可以自动更新。（推荐）
 - **便携版**：下载 `XiaoweiReader-x.x.x-win-x64.zip`，解压后双击里面的 exe。免安装，但不会自动更新，需要新版时重新下载。
 - **网页版**：直接双击仓库里的 `index.html`。如果双击没反应，运行同目录的 `双击启动-小唯阅读器.bat`，它会用 Edge 或 Chrome 的独立窗口打开。
 
