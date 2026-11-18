@@ -428,6 +428,17 @@ function getSettings(){return Object.assign({base:'https://api.deepseek.com/v1',
 function toast(msg,ms){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),ms||2600)}
 function hash(s){let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return (h>>>0).toString(36)}
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+/* 公式行兜底识别：不依赖字体名（Word/CambriaMath/STIX 等也能识别），避免被当标题或正文 */
+function looksLikeEquation(s){
+  const t=String(s||'').trim();
+  if(t.length<3||t.length>90)return false;
+  if(/^(?:Fig|Figure|Table|Algorithm)\s*\.?\s*\d/i.test(t))return false;
+  if(!/[=∑∫√≈≤≥±∝∈⊗⊙∂∇]/.test(t))return false;
+  if(/\b(?:the|and|that|this|with|from|which|where|we|our|is|are|was|were|have|has|been|can|may|such|these|those|for|into|using|used|show|shows)\b/i.test(t))return false;
+  const words=t.match(/[A-Za-z]{4,}/g)||[];
+  if(words.length>3)return false;
+  return /[A-Za-z0-9]/.test(t);
+}
 function download(name,content,mime){
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([content],{type:(mime||'text/markdown')+';charset=utf-8'}));
@@ -573,7 +584,8 @@ function mergeLines(lines,bodyFs){
     const fsTh=(bodyFs||fsMode)*1.18;
     const boldHead=L.boldFrac!=null&&L.boldFrac>0.75&&L.fs>=(bodyFs||fsMode)*0.95&&L.text.trim().length<65&&
       !/[.。,;:!?]$/.test(L.text.trim())&&!/^[\d\s.]+$/.test(L.text.trim())&&/^[A-Z\u4e00-\u9fa5]/.test(L.text.trim());
-    const isHead=!isCap&&!L._meta&&(
+    const eqLike=looksLikeEquation(L.text); // 公式行不得被大字号/粗体规则误判成章节标题
+    const isHead=!isCap&&!L._meta&&!eqLike&&(
       (L.fs>=fsTh&&L.text.length<95)
       ||boldHead
       ||numberedHead
@@ -874,7 +886,7 @@ async function parsePDF(file){
           const o=page.commonObjs.get(id);
           const nm=((o&&o.name)||'')+''+((o&&o.loadedName)||'');
           r.bold=/bold|black|heavy|semibold|sfbx|cmbx|bf[0-9]|\bbx\b/i.test(nm);
-          r.math=/cmr|cmmi|cmsy|cmex|cmbx|cmti|mathematical|math[0-9]|lasy|wasy|msam|msbm|euclid|txfonts|pxfonts/i.test(nm);
+          r.math=/cmr|cmmi|cmsy|cmex|cmbx|cmti|mathematical|math[0-9]|cambriamath|cambria[ -]?math|stix|euler|rsfs|mtmath|latinmodern|lasy|wasy|msam|msbm|euclid|txfonts|pxfonts/i.test(nm);
         }
       }catch(e){}
       fontFlags.set(id,r);return r;
@@ -1185,21 +1197,24 @@ async function parsePDF(file){
         if(l.mathFrac>0.5&&/[A-Za-zλσ⊙π∑√≈≤≥]/.test((l.text||'').replace(/[\d\s.,:;()=+\-×]/g,'')))word=true;
       });
       g.mathFrac=ch?mc/ch:0;g.hasMathWord=word;
+      g.eqLike=g.lines.every(l=>looksLikeEquation(l.text)||(l.mathFrac||0)>0.45); // 整组都是公式行才兜底，避免带 prose 的行组被整块裁走
     });
     const eqRowLines=new Set();const eqBlocks=[];let eqBlock=null;
     const flushEq=()=>{if(eqBlock)eqBlocks.push(eqBlock);eqBlock=null};
     for(const g of vrows){
-      if(g.mathFrac>0.45&&g.hasMathWord){
+      if((g.mathFrac>0.45&&g.hasMathWord)||g.eqLike){
         if(eqBlock&&(eqBlock.col!==g.col||g.top-eqBlock.bottom>(bodyFs||10)*2.6))flushEq();
-        if(!eqBlock)eqBlock={top:g.top,bottom:g.bottom,x0:g.x0,x1:g.x1,chars:0,col:g.col};
+        if(!eqBlock)eqBlock={top:g.top,bottom:g.bottom,x0:g.x0,x1:g.x1,chars:0,col:g.col,lines:[]};
         eqBlock.bottom=Math.max(eqBlock.bottom,g.bottom);
         eqBlock.x0=Math.min(eqBlock.x0,g.x0);eqBlock.x1=Math.max(eqBlock.x1,g.x1);
         eqBlock.chars+=g.lines.reduce((s,l)=>s+l.text.replace(/\s+/g,'').length,0);
+        eqBlock.lines.push(...g.lines);
         g.lines.forEach(l=>eqRowLines.add(l));
       }else if(eqBlock&&eqBlock.col===g.col&&g.lines.every(l=>isChartLine(l))&&g.top-eqBlock.bottom<=(bodyFs||10)*1.2){ // 紧随的编号行"(2)"
         eqBlock.bottom=Math.max(eqBlock.bottom,g.bottom);
         eqBlock.x0=Math.min(eqBlock.x0,g.x0);eqBlock.x1=Math.max(eqBlock.x1,g.x1);
         eqBlock.chars+=g.lines.reduce((s,l)=>s+l.text.replace(/\s+/g,'').length,0);
+        eqBlock.lines.push(...g.lines);
         g.lines.forEach(l=>eqRowLines.add(l));
       }else flushEq();
     }
@@ -1221,8 +1236,8 @@ async function parsePDF(file){
       }else{flushRun();textLines.push(L)}
     }
     flushRun();
-    // 公式盒：残片（总字符 <10 的 "ˆ"/"c" 上下标碎串）丢弃；与正文行窗口冲突时收缩边界；相邻盒合并（式+参数/多行式组）
-    let eqBoxes=eqBlocks.filter(b=>b.chars>=10)
+    // 公式盒：短公式（N=6、E=mc2）也保留；但必须含等式/数学符号行，避免上下标碎片噪声
+    let eqBoxes=eqBlocks.filter(b=>b.chars>=3&&b.lines.some(l=>looksLikeEquation(l.text)||(l.mathFrac||0)>0.45))
       .map(b=>({x0:b.x0-14,x1:b.x1+14,ptt:b.top-6,ptb:b.bottom+8,top:b.top,run:{col:b.col}}));
     eqBoxes.forEach(b=>{
       textLines.forEach(L=>{

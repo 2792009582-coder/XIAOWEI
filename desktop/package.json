@@ -1,7 +1,7 @@
 {
   "name": "xiaowei-reader-desktop",
   "productName": "小唯阅读器",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "小唯阅读器 · Xiaowei Reader —— 桌面版（Electron 壳）",
   "main": "main.js",
   "author": "Xiaowei Reader",

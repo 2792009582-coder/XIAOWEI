@@ -25,8 +25,8 @@
 按你的需要直接点链接：
 
 - **在线网页版（不用下载）**：<https://2792009582-coder.github.io/XIAOWEI/>
-- **安装版 exe（推荐，支持自动更新）**：[立即下载安装版](https://github.com/2792009582-coder/XIAOWEI/releases/latest/download/XiaoweiReader-1.0.0-setup.exe)
-- **便携版 zip（解压即用，不自动更新）**：[立即下载便携版](https://github.com/2792009582-coder/XIAOWEI/releases/latest/download/XiaoweiReader-1.0.0-win-x64.zip)
+- **安装版 exe（推荐，支持自动更新）**：[立即下载安装版](https://github.com/2792009582-coder/XIAOWEI/releases/latest/download/XiaoweiReader-1.0.1-setup.exe)
+- **便携版 zip（解压即用，不自动更新）**：[立即下载便携版](https://github.com/2792009582-coder/XIAOWEI/releases/latest/download/XiaoweiReader-1.0.1-win-x64.zip)
 - **查看所有历史版本**：[Releases](https://github.com/2792009582-coder/XIAOWEI/releases)
 
 如果上面的直链因为发布新版而失效，进“查看所有历史版本”，拉到页面底部展开 **Assets** 手动选对应的文件。
