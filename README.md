@@ -22,13 +22,18 @@
 
 ### 第一步：拿到它
 
-**最快的方式：[点这里下载最新版](https://github.com/2792009582-coder/XIAOWEI/releases/latest)**
+按你的需要直接点链接：
 
-打开下载页后，拉到页面最底部，找到 **Assets** 区域并点开，就能看到安装包：
+- **在线网页版（不用下载）**：<https://2792009582-coder.github.io/XIAOWEI/>
+- **安装版 exe（推荐，支持自动更新）**：[立即下载安装版](https://github.com/2792009582-coder/XIAOWEI/releases/latest/download/XiaoweiReader-1.0.0-setup.exe)
+- **便携版 zip（解压即用，不自动更新）**：[立即下载便携版](https://github.com/2792009582-coder/XIAOWEI/releases/latest/download/XiaoweiReader-1.0.0-win-x64.zip)
+- **查看所有历史版本**：[Releases](https://github.com/2792009582-coder/XIAOWEI/releases)
 
-- **安装版**：下载 `XiaoweiReader-x.x.x-setup.exe`，双击安装。以后可以自动更新。（推荐）
-- **便携版**：下载 `XiaoweiReader-x.x.x-win-x64.zip`，解压后双击里面的 exe。免安装，但不会自动更新，需要新版时重新下载。
-- **网页版**：直接双击仓库里的 `index.html`。如果双击没反应，运行同目录的 `双击启动-小唯阅读器.bat`，它会用 Edge 或 Chrome 的独立窗口打开。
+如果上面的直链因为发布新版而失效，进“查看所有历史版本”，拉到页面底部展开 **Assets** 手动选对应的文件。
+
+网页版也可以离线用：把仓库里的 `index.html` 下载到本地再双击。如果双击没反应，右键 → 打开方式 → Microsoft Edge 或 Chrome；也可以运行同目录的 `双击启动-小唯阅读器.bat`。
+
+注意：在 GitHub 网页里直接点 `index.html` 看到的是源码，这是 GitHub 的文件查看器，不是网页版。
 
 ### 第二步：打开一篇论文
 
